@@ -1,29 +1,37 @@
-﻿
-//#include "singleton.h"
-#include "singleton.h"
+﻿/**
+* @Author: YangGuang
+* @Date:   2018-10-15
+* @Email:  guang334419520@126.com
+* @Filename: singleton.cc
+* @Last modified by:  YangGuang
+*/
+#include "base/singleton.h"
 
 #include <chrono>
 #include <thread>
 
+#include "base/at_exit.h"
+#include "base/logging.h"
 
 
 namespace base {
 namespace internal {
 
 bool NeedsLazyInstance(std::atomic<void*>* state) {
-   // 灏濊瘯鍘诲垱寤轰竴涓狪nstance,濡傛灉鎴戜滑鏄槸绗竴涓埌鏉ョ殑绾跨▼,杩斿洖true.
-   // 鍚﹀垯浠ｈ〃涓嶆槸绗竴涓嚎绋嬪埌鏉ワ紝鍙兘浜х敓绾跨▼瀵规暟鎹浜夋姠.
+	// 尝试去创建一个Instance,如果我们是是第一个到来的线程,返回true.
+	// 否则代表不是第一个线程到来，可能产生线程对数据对争抢.
    if (state->compare_exchange_strong(kLazyDefaultInstanceState,
                                       kLazyInstanceStateCreating,
                                       std::memory_order_acq_rel)) {
-      // 鏄涓€涓嚎绋嬪埌鏉ワ紝姣旇緝瀹屼箣鍚庯紝鎶妔tate鍊煎師鍏堝鍊煎鍒朵负kLazyInstanceStateCreateing.
-      // 浠ヤ负涓嬩竴涓埌鏉ュ绾跨▼姣旇緝浼氬け璐? 浠庤€屽彲浠ヨ揪鍒板悓姝ュ鏁堟灉锛屽彲浠ョ洿鎺ヨ繑鍥瀟rue.
+	   // 是第一个线程到来，比较完之后，把state值原先对值复制为kLazyInstanceStateCreateing.
+	   // 以为下一个到来对线程比较会失败, 从而可以达到同步对效果，可以直接返回true.
       return true;
    }
 
-   // 涓嶆槸绗竴涓嚎绋嬶紝鍦ㄨ繖閲岃淇濊瘉鏁版嵁瀵规纭€э紝鍥犳涓€鐩寸瓑寰卻tate涓嶇瓑浜巏LazyInstanceStateCreating.
+   // 不是第一个线程，在这里要保证数据对正确性，因此一直等待state不等于kLazyInstanceStateCreating.
    if (state->load(std::memory_order_acquire) == kLazyInstanceStateCreating) {
-      // 杩欑鎯呭喌闇€瑕佷繚鎶ゅ绾跨▼鐨勫畨鍏紝璁﹕tate != kLazyInstanceStateCreatingd锛?      // 褰撹繖閲岄潰涓嶇瓑浜庢椂锛岃鏄庡彟涓€涓嚎绋嬩慨鏀逛簡瀹冪殑鍊硷紝杩欎釜鍊肩幇鍦ㄦ槸姝ｇ‘鐨勶紝鍙互杩涜杩斿洖
+	   // 这种情况需要保护多线程的安全，让state != kLazyInstanceStateCreatingd，
+	   // 当这里面不等于时，说明另一个线程修改了它的值，这个值现在是正确的，可以进行返回
       auto start = std::chrono::system_clock::now();
 
       do {
@@ -45,7 +53,10 @@ bool NeedsLazyInstance(std::atomic<void*>* state) {
 
 void CompleteLazyInstance(void (*destructor)(void*),
                           void* destructor_arg) {
+	DCHECK(destructor);
 
+	
+	AtExitManager::RegisterCallback(destructor, destructor_arg);
 }
 
 

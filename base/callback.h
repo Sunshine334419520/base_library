@@ -14,11 +14,23 @@
 namespace base {
 
 template <typename R, typename... Args>
-class Callback {
+class Callback {//: public std::function<R(Args...> {
  public:
 	 using RunType = R(Args...);
 
-	 Callback() {}
+	 //Callback(std::function<RunType> func)
+		//: func_(func){}
+
+	 ////Callback(std::bind* )
+
+	 //Callback(std::function<RunType>&& func) {
+		// func_ = std::move(func);
+	 //}
+
+	 //operator std::function<RunType>() {
+		// return func_;
+	 //}
+
 
 
 	 /*
@@ -32,15 +44,16 @@ class Callback {
 	 //bool Equals(const OnceCallback& other) const { return fun_ == other.fun_; }
 
 	 R Run() const {
-		 return fun_();
+		 return 
 	 }
 
 
  private:
-	 std::function<RunType> fun_;
+	 //std::function<RunType> func_;
 };
 
-using Closure = Callback<void()>;
+//using Closure = Callback<void()>;
+using Closure = std::function<void()>;
 
 }
 

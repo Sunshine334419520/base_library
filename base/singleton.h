@@ -1,4 +1,11 @@
-﻿#ifndef BASE_SIGNALETON_H
+﻿/**
+* @Author: YangGuang
+* @Date:   2018-10-15
+* @Email:  guang334419520@126.com
+* @Filename: singleton.h
+* @Last modified by:  YangGuang
+*/
+#ifndef BASE_SIGNALETON_H
 #define BASE_SIGNALETON_H
 
 #include <atomic>
@@ -11,8 +18,8 @@ namespace base {
 
 namespace internal {
 
-void* kLazyInstanceStateCreating (new int(1));
-void* kLazyDefaultInstanceState = nullptr;
+static void* kLazyInstanceStateCreating (new int(1));
+static void* kLazyDefaultInstanceState = nullptr;
 
 BASE_EXPORT bool NeedsLazyInstance(std::atomic<void*>* state);
 BASE_EXPORT void CompleteLazyInstance(void (*destructor)(void*),
@@ -32,12 +39,12 @@ Type* GetOrCreateLazyPointer(std::atomic<Type*>* state,
                              void* destructor_arg) {
     //std::atomic<void*> instance = state->load();
     //auto instance = state->load();
-    std::atomic<void*> instance(state->load(std::memory_order_acquire));
+    std::atomic<Type*> instance(state->load(std::memory_order_acquire));
 
-    if (!instance) {
+	if (!instance.load()) {
         
         //state->compare_exchange_strong(nullptr, const_cast<void*>(internal::kLazyInstanceStateCreating));
-        if (internal::NeedsLazyInstance(state)) {
+        if (internal::NeedsLazyInstance(reinterpret_cast<std::atomic<void*>*>(state))) {
             instance = (*creator_func)(creator_arg);
 
             state->store(instance.load(), std::memory_order_release);
@@ -50,7 +57,7 @@ Type* GetOrCreateLazyPointer(std::atomic<Type*>* state,
             instance = state->load(std::memory_order_acquire);
         }
     }
-    return reinterpret_cast<Type*>(instance);
+    return reinterpret_cast<Type*>(instance.load());
 }
 
 
@@ -76,26 +83,26 @@ struct DefaultSingletonTraits {
 // for example.
 // Singleton<Type>::get();
 template <typename Type,
-          typename Traits = DefaultSingletonTraits,
+          typename Traits = DefaultSingletonTraits<Type>,
            typename DifferentiatingType = Type>
 class Singleton {
  private:
-    // 瑕佹兂浣跨敤杩欎釜绫伙紝Type蹇呴』鍖呭惈GetInstance鍑芥暟锛屽苟涓旈伒寰埗瀹氬瑙勫垯.
+	 // 要想使用这个类，Type必须包含GetInstance函数，并且遵循制定对规则.
     friend Type* Type::GetInstance();
 
-    // 鑾峰緱涓€涓猅ype绫诲瀷鎸囬拡锛屽閮ㄤ娇鐢ㄨ繖涓嚱鏁拌幏寰椾竴涓嚎绋嬪畨鍏ㄧ殑鍗曞疄渚嬫寚閽?
+	// 获得一个Type类型指针，外部使用这个函数获得一个线程安全的单实例指针.
     static Type* get() {
-        return subtle::GetOrCreateLazyPointer(instance_, CreatorFunc,
+        return subtle::GetOrCreateLazyPointer<Type>(&instance_, CreatorFunc,
                                               nullptr, OnExit, nullptr);
     }
 
     static Type* CreatorFunc(void* /* creator_arg*/) { return Traits::New(); }
 
-    // 鍒犻櫎鍑芥暟骞朵笉闇€瑕佷繚璇佺嚎绋嬪畨鍏ㄦ€э紝瀹冧粎浠呭湪杩涚▼缁堟鍓嶈皟鐢?
-    // 杩欎釜鍑芥暟鍙細鍦ㄤ竴涓嚎绋嬭皟鐢? 鎵€浠ュ鍘熷瓙鐨勮闂互鍙婁慨鏀规垜浠娇鐢?	// std::memory_order_relaxed.
+	// 删除函数并不需要保证线程安全性，它仅仅在进程终止前调用.
+	// 这个函数只会在一个线程调用. 所以使用std::memory_order_relaxed.
     static void OnExit(void* /* unused*/) {
-        Traits::Delete(instance_.load(std::memory_order_relaxed);
-        instance_ .store(internal::kLazyDefaultInstanceState, 
+        Traits::Delete(instance_.load(std::memory_order_relaxed));
+        instance_ .store(reinterpret_cast<Type*>(internal::kLazyDefaultInstanceState), 
 						 std::memory_order_relaxed);
     }
 
@@ -104,7 +111,7 @@ class Singleton {
 
 template <typename Type, typename Traits, typename DifferentiatingType>
 std::atomic<Type*> Singleton<Type, Traits, DifferentiatingType>::instance_ =
-        base::internal::kLazyDefaultInstanceState;
+				reinterpret_cast<Type*>(base::internal::kLazyDefaultInstanceState);
 
 
 }

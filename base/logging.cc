@@ -1,4 +1,11 @@
-﻿#include "base/logging.h"
+﻿/**
+* @Author: YangGuang
+* @Date:   2018-10-13
+* @Email:  guang334419520@126.com
+* @Filename: logging.cc
+* @Last modified by:  YangGuang
+*/
+#include "base/logging.h"
 
 #include <time.h>
 #include <cstdlib>
