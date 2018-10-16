@@ -29,7 +29,7 @@ class IncomingTaskQueue {
 
 
 		  // 如果HasTasks() 返回true，则返回下一个任务.
-		  virtual const PendingTask& Peek() = 0;
+		  //virtual const PendingTask& Peek() = 0;
 
 	 };
 };

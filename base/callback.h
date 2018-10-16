@@ -13,47 +13,52 @@
 
 namespace base {
 
+//	
+//template <typename R, typename... Args>
+//class Callback {//: public std::function<R(Args...> {
+// public:
+//	 using RunType = R(Args...);
+//
+//	 //Callback(std::function<RunType> func)
+//		//: func_(func){}
+//
+//	 ////Callback(std::bind* )
+//
+//	 //Callback(std::function<RunType>&& func) {
+//		// func_ = std::move(func);
+//	 //}
+//
+//	 //operator std::function<RunType>() {
+//		// return func_;
+//	 //}
+//
+//
+//
+//	 /*
+//	 OnceCallback(const OnceCallback&) = delete;
+//	 OnceCallback& operator=(OnceCallback&) = delete;
+//
+//	 OnceCallback(OnceCallback&&) noexcept = default;
+//	 OnceCallback& operator=(OnceCallback&&) noexcept = default;
+//	 */
+//
+//	 //bool Equals(const OnceCallback& other) const { return fun_ == other.fun_; }
+//
+//	 R Run() const {
+//		 return 
+//	 }
+//
+//
+// private:
+//	 //std::function<RunType> func_;
+//};
+
 template <typename R, typename... Args>
-class Callback {//: public std::function<R(Args...> {
- public:
-	 using RunType = R(Args...);
+using Callback = std::function<R(Args...)>;
 
-	 //Callback(std::function<RunType> func)
-		//: func_(func){}
-
-	 ////Callback(std::bind* )
-
-	 //Callback(std::function<RunType>&& func) {
-		// func_ = std::move(func);
-	 //}
-
-	 //operator std::function<RunType>() {
-		// return func_;
-	 //}
-
-
-
-	 /*
-	 OnceCallback(const OnceCallback&) = delete;
-	 OnceCallback& operator=(OnceCallback&) = delete;
-
-	 OnceCallback(OnceCallback&&) noexcept = default;
-	 OnceCallback& operator=(OnceCallback&&) noexcept = default;
-	 */
-
-	 //bool Equals(const OnceCallback& other) const { return fun_ == other.fun_; }
-
-	 R Run() const {
-		 return 
-	 }
-
-
- private:
-	 //std::function<RunType> func_;
-};
 
 //using Closure = Callback<void()>;
-using Closure = std::function<void()>;
+using Closure = Callback<void()>;
 
 }
 
