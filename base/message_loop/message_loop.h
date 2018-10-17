@@ -164,6 +164,10 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
 	 void DisallowTaskObservers() { }
 
  protected:
+	 friend internal::IncomingTaskQueue;
+	 friend PendingTask;
+	 //friend Thread;
+
 	 std::unique_ptr<MessagePump> pump_;
 	 
 	 using MessagePumpFactoryCallback = 

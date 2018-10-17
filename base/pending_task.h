@@ -10,11 +10,13 @@
 
 #include <array>
 #include <queue>
+#include <chrono>
 
 #include "base/base_export.h"
 #include "base/callback.h"
 #include "base/location.h"
 
+//using namespace std;
 
 namespace base {
 
@@ -24,10 +26,23 @@ enum class Nestable {
 };
 
 struct BASE_EXPORT PendingTask {
+	PendingTask(const Location& posted_from,
+				Closure task,
+				std::chrono::milliseconds delayed_run_time = std::chrono::milliseconds(0),
+				Nestable nestable = Nestable::kNestable);
+	PendingTask(PendingTask&& other);
+	~PendingTask();
+
+	PendingTask& operator=(PendingTask&& other);
+
+	// Used to support sorting.
+	bool operator<(const PendingTask& other) const;
 
 	Closure task;
 	
 	Location posted_from;
+
+	std::chrono::milliseconds delayed_run_time;
 
 	std::array<const void*, 4> task_backtrace;
 
