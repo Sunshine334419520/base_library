@@ -113,6 +113,14 @@ logging::Logging(log_type).Start(log_type, __LINE__, __FUNCTION__)
 #define DCHECK_NE(val1 ,val2)				\
 	CHECK_NE(val1, val2)
 
+#else 
+
+#define DCHECK(condition)	
+#define DCHECK_NOTNULL(val1)
+#define DCHECK_NULL(val1)
+#define DCHECK_EQ(val1, val2)
+#define DCHECK_NE(val1, val2)
+
 
 #endif		// DCHECK_IS_ON();
 
