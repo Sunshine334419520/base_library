@@ -2,10 +2,10 @@
 * @Author: YangGuang
 * @Date:   2018-10-15
 * @Email:  guang334419520@126.com
-* @Filename: singleton.cc
+* @Filename: lazy_instance_helpers.cc
 * @Last modified by:  YangGuang
 */
-#include "base/singleton.h"
+#include "lazy_instance_helpers.h"
 
 #include <chrono>
 #include <thread>
@@ -53,10 +53,9 @@ bool NeedsLazyInstance(std::atomic<void*>* state) {
 
 void CompleteLazyInstance(void (*destructor)(void*),
                           void* destructor_arg) {
-	DCHECK(destructor);
 
-	
-	AtExitManager::RegisterCallback(destructor, destructor_arg);
+	if (!destructor)
+		AtExitManager::RegisterCallback(destructor, destructor_arg);
 }
 
 

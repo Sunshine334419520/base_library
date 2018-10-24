@@ -11,57 +11,11 @@
 #include <atomic>
 
 #include "base/base_export.h"
+#include "base/lazy_instance_helpers.h"
 
 
 
 namespace base {
-
-namespace internal {
-
-static void* kLazyInstanceStateCreating (new int(1));
-static void* kLazyDefaultInstanceState = nullptr;
-
-BASE_EXPORT bool NeedsLazyInstance(std::atomic<void*>* state);
-BASE_EXPORT void CompleteLazyInstance(void (*destructor)(void*),
-                                          void* destructor_arg);
-
-    
-} // internal
-
-
-namespace subtle {
-
-template <typename Type> 
-Type* GetOrCreateLazyPointer(std::atomic<Type*>* state,
-                             Type* (*creator_func)(void*),
-                             void* creator_arg,
-                             void (*destrucotr)(void*),
-                             void* destructor_arg) {
-    //std::atomic<void*> instance = state->load();
-    //auto instance = state->load();
-    std::atomic<Type*> instance(state->load(std::memory_order_acquire));
-
-	if (!instance.load()) {
-        
-        //state->compare_exchange_strong(nullptr, const_cast<void*>(internal::kLazyInstanceStateCreating));
-        if (internal::NeedsLazyInstance(reinterpret_cast<std::atomic<void*>*>(state))) {
-            instance = (*creator_func)(creator_arg);
-
-            state->store(instance.load(), std::memory_order_release);
-
-            //if (destrucotr)
-            internal::CompleteLazyInstance(destrucotr, destructor_arg);
-                
-        }
-        else {
-            instance = state->load(std::memory_order_acquire);
-        }
-    }
-    return reinterpret_cast<Type*>(instance.load());
-}
-
-
-}   // namespace subtle.
 
 template <typename Type>
 struct DefaultSingletonTraits {
@@ -79,6 +33,11 @@ struct DefaultSingletonTraits {
 
 };
 
+template <typename Type>
+struct LeakySingletonTraits : public DefaultSingletonTraits<Type> {
+	static const bool kRegisterAtExit = false;
+};
+
 
 // for example.
 // Singleton<Type>::get();
@@ -93,7 +52,8 @@ class Singleton {
 	// 获得一个Type类型指针，外部使用这个函数获得一个线程安全的单实例指针.
     static Type* get() {
         return subtle::GetOrCreateLazyPointer<Type>(&instance_, CreatorFunc,
-                                              nullptr, OnExit, nullptr);
+													nullptr, Traits::kRegisterAtExit
+													? OnExit : nullptr, nullptr);
     }
 
     static Type* CreatorFunc(void* /* creator_arg*/) { return Traits::New(); }
@@ -102,7 +62,7 @@ class Singleton {
 	// 这个函数只会在一个线程调用. 所以使用std::memory_order_relaxed.
     static void OnExit(void* /* unused*/) {
         Traits::Delete(instance_.load(std::memory_order_relaxed));
-        instance_ .store(reinterpret_cast<Type*>(internal::kLazyDefaultInstanceState), 
+        instance_.store(reinterpret_cast<Type*>(internal::kLazyDefaultInstanceState), 
 						 std::memory_order_relaxed);
     }
 

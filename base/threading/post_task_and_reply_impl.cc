@@ -10,6 +10,8 @@
 
 #include "base/location.h"
 #include "base/logging.h"
+#include "base/sequenced_task_runner.h"
+#include "base/sequenced_task_runner_handle.h"
 
 
 namespace base {
@@ -33,9 +35,11 @@ class PostTaskAndReplyRelay {
 	 void RunTaskAndPostReply() {
 		 std::move(task_)();
 
+		 
 		 origin_task_runner_->PostTask(from_here_,
-									   std::bind(&PostTaskAndReplyRelay::RunReplayAndSelDestruct,
+									   std::bind(&PostTaskAndReplyRelay::RunReplyAndSelfDestruct,
 									   this));
+									   
 	 }
  private:
 	 void RunReplyAndSelfDestruct() {
@@ -75,7 +79,7 @@ bool PostTaskAndReplayImpl::PostTaskAndReply(const Location& from_here,
 		new PostTaskAndReplyRelay(from_here, std::move(task), std::move(reply));
 
 	if (!PostTask(from_here,
-		std::bind(&PostTaskAndReplyRelay::RunTaskAndPostReply, reply)) < 0) {
+		std::bind(&PostTaskAndReplyRelay::RunTaskAndPostReply, relay))) {
 		delete relay;
 		return false;
 	}

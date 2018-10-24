@@ -53,12 +53,18 @@ namespace base {
 //	 //std::function<RunType> func_;
 //};
 
+/*
 template <typename R, typename... Args>
 using Callback = std::function<R(Args...)>;
+*/
+
+template <typename Fty>
+using Callback = std::function<Fty>;
 
 
 //using Closure = Callback<void()>;
-using Closure = Callback<void()>;
+//using Closure = Callback<void()>;
+using Closure = std::function<void()>;
 
 }
 

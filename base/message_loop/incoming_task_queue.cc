@@ -24,7 +24,7 @@ CalculateDelayedRuntime(std::chrono::milliseconds delay) {
 		std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch() +
 								   delay);
 	else
-		DCHECK_EQ(delay.count, 0);
+		DCHECK_EQ(delay.count(), 0);
 
 	return delayed_run_time;
 }
@@ -120,7 +120,7 @@ const PendingTask & IncomingTaskQueue::TriageQueue::Peek()
 
 PendingTask IncomingTaskQueue::TriageQueue::Pop()
 {
-	return PendingTask();
+	//return PendingTask();
 }
 
 bool IncomingTaskQueue::TriageQueue::HasTasks()
@@ -155,7 +155,7 @@ const PendingTask & IncomingTaskQueue::DelayedQueue::Peek()
 
 PendingTask IncomingTaskQueue::DelayedQueue::Pop()
 {
-	return PendingTask();
+	//return PendingTask();
 }
 
 bool IncomingTaskQueue::DelayedQueue::HasTasks()
@@ -186,7 +186,8 @@ const PendingTask & IncomingTaskQueue::DeferredQueue::Peek()
 
 PendingTask IncomingTaskQueue::DeferredQueue::Pop()
 {
-	return PendingTask();
+	//return PendingTask();
+	
 }
 
 bool IncomingTaskQueue::DeferredQueue::HasTasks()
