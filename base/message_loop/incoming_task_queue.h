@@ -85,6 +85,17 @@ class IncomingTaskQueue {
 	 // Runs |pending_task|.
 	 void RunTask(PendingTask* pending_task);
 
+	 ReadAndRemoveOnlyQueue& triage_tasks() { return triage_tasks_; }
+
+	 Queue& delayed_tasks() { return delayed_tasks_; }
+
+	 Queue& deferred_tasks() { return deferred_tasks_; }
+
+	 bool HasPendingHighResolutionTasks() {
+		 return pending_high_res_tasks_ > 0;
+	 }
+
+ private:
 	 // 下面这三个队列，都是用于message loop中保存需要运行的消息的对应队列.
 	 // 一个保存着普通的任务队列, 一个保存着延迟任务队列, 一个保存着闲置任务队列.
 	 class TriageQueue : public ReadAndRemoveOnlyQueue {
@@ -206,6 +217,13 @@ class IncomingTaskQueue {
 
 	 // 直到StartScheduling()调用前都为false.
 	 bool is_ready_for_schedulig_ = false;
+
+	 // True if the outgoing queue (|triage_tasks_|) is empty. Toggled under
+	 // |incoming_queue_lock_| in ReloadWorkQueue() so that
+	 // PostPendingTaskLockRequired() can tell, without accessing the thread unsafe
+	 // |triage_tasks_|, if the IncomingTaskQueue has been made non-empty by a
+	 // PostTask() (and needs to inform its Observer).
+	 bool triage_queue_empty_ = true;
 
 	 DISALLOW_COPY_AND_ASSIGN(IncomingTaskQueue);
 };

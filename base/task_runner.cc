@@ -38,10 +38,16 @@ bool PostTaskAndReplyTaskRunner::PostTask(const Location& from_here,
 }	// namespace .
 
 
+bool TaskRunner::PostTask(const Location & from_here, Closure task) {
+	return PostDelayedTask(from_here, std::move(task),
+						   std::chrono::milliseconds(0));
+}
+
 bool TaskRunner::PostTaskAndReplay(const Location & from_here,
 								   Closure task,
 								   Closure reply) {
-	return false;
+	return PostTaskAndReplyTaskRunner(this).PostTaskAndReply(
+		from_here, task, reply);
 }
 
 TaskRunner::TaskRunner() = default;

@@ -11,52 +11,82 @@
 #include <functional>
 #include <memory>
 
+#include "base/base_export.h"
+
 namespace base {
 
-//	
-//template <typename R, typename... Args>
-//class Callback {//: public std::function<R(Args...> {
-// public:
-//	 using RunType = R(Args...);
-//
-//	 //Callback(std::function<RunType> func)
-//		//: func_(func){}
-//
-//	 ////Callback(std::bind* )
-//
-//	 //Callback(std::function<RunType>&& func) {
-//		// func_ = std::move(func);
-//	 //}
-//
-//	 //operator std::function<RunType>() {
-//		// return func_;
-//	 //}
-//
-//
-//
-//	 /*
-//	 OnceCallback(const OnceCallback&) = delete;
-//	 OnceCallback& operator=(OnceCallback&) = delete;
-//
-//	 OnceCallback(OnceCallback&&) noexcept = default;
-//	 OnceCallback& operator=(OnceCallback&&) noexcept = default;
-//	 */
-//
-//	 //bool Equals(const OnceCallback& other) const { return fun_ == other.fun_; }
-//
-//	 R Run() const {
-//		 return 
-//	 }
-//
-//
-// private:
-//	 //std::function<RunType> func_;
-//};
 
 /*
-template <typename R, typename... Args>
-using Callback = std::function<R(Args...)>;
+class BASE_EXPORT Closure {
+ public:
+	 Closure(const std::function<void()> fun)
+		 : fun_(fun) {}
+
+	 
+
+	 explicit Closure(std::function<void()>&& fun) noexcept
+		 : fun_(std::move(fun)) {}
+
+	 Closure(const Closure& other)
+		 : fun_(other.fun_) {}
+
+	 Closure(const Closure&& other) noexcept
+		 : fun_(std::move(other.fun_)) {}
+
+	 Closure() : fun_(nullptr) {}
+
+	 Closure& operator=(const Closure& other) = default;
+	 Closure& operator=(Closure&& other) = default;
+
+	 ~Closure() = default;
+
+	 bool is_null() const { return fun_ == nullptr; }
+
+	 void Run() { fun_(); }
+
+	 void Reset() { fun_ = nullptr; }
+
+	 explicit operator bool() { return !is_null(); }
+
+	 template <typename Fty>
+	 operator std::function<Fty>() { return fun_; }
+ private:
+	 std::function<void()> fun_;
+};
+
+class BASE_EXPORT OnceClosure {
+ public:
+	explicit OnceClosure(std::function<void()> fun)
+		: fun_(fun) {}
+	explicit OnceClosure(std::function<void()>&& fun)
+		: fun_(std::move(fun_)) {}
+
+
+	OnceClosure(const OnceClosure& other) = delete;
+	OnceClosure& operator=(const OnceClosure& other) = delete;
+
+	OnceClosure(OnceClosure&& other) = default;
+	OnceClosure& operator=(OnceClosure&& other) = default;
+
+	~OnceClosure() = default;
+
+	bool is_null() const { return fun_ == nullptr; }
+
+	void Run() { 
+		OnceClosure cb = std::move(*this);
+		cb.fun_();
+	}
+
+	void Reset() { fun_ = nullptr; }
+
+	explicit operator bool() { return !is_null(); }
+ private:
+	 std::function<void()> fun_;
+};
 */
+
+
+
 
 template <typename Fty>
 using Callback = std::function<Fty>;

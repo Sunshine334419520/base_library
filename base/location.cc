@@ -11,6 +11,7 @@
 #include <stdio.h>
 
 #include "base/macor.h"
+#include "base/logging.h"
 
 namespace base {
 
@@ -36,7 +37,7 @@ Location::Location(const char* function_name,
 	// The program counter isn't supported in NaCl so location objects won't work
 	// properly in that context.
 	//DCHECK(program_counter);
-	assert(program_counter);
+	DCHECK(program_counter);
 #endif
 }
 

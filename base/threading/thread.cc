@@ -2,6 +2,7 @@
 
 #include <cassert>
 
+#include "base/logging.h"
 
 namespace base {
 
@@ -29,10 +30,10 @@ bool Thread::Start() {
 
 bool Thread::StartWithOptions(const Options & options) {
 
-	assert(!message_loop_);
-	assert(!IsRunning());
-	assert(!stopping_);
-	assert(!is_thread_valid_);
+	DCHECK(!message_loop_);
+	DCHECK(!IsRunning());
+	DCHECK(!stopping_);
+	DCHECK(!is_thread_valid_);
 
 	id_ = kInvalidThreadId;
 
@@ -60,7 +61,7 @@ bool Thread::StartWithOptions(const Options & options) {
 	
 	// ignore_result(message_loop_owned_.release());
 
-	assert(message_loop_);
+	DCHECK(message_loop_);
 	return true;
 }
 
@@ -73,7 +74,7 @@ bool Thread::WaitUntilThreadStarted() const {
 }
 
 void Thread::Stop() {
-	assert(joinable_);
+	DCHECK(joinable_);
 
 	std::lock_guard<std::mutex> lock(thread_mutex_);
 
@@ -86,7 +87,7 @@ void Thread::Stop() {
 
 	is_thread_valid_ = false;
 
-	assert(!message_loop_);
+	DCHECK(!message_loop_);
 	
 	stopping_ = false;
 }
@@ -98,7 +99,7 @@ void Thread::StopSoon() {
 	stopping_ = true;
 
 	if (using_external_message_loop_) {
-		assert(!IsRunning());
+		DCHECK(!IsRunning());
 		message_loop_ = nullptr;
 		return;
 	}
@@ -130,18 +131,18 @@ bool Thread::IsRunning() const {
 }
 
 void Thread::Run(RunLoop * run_loop) {
-	assert(id_ == PlatformThread::CurrentId());
-	//assert(is_thread_valid_);
+	DCHECK(id_ == PlatformThread::CurrentId());
+	//DCHECK(is_thread_valid_);
 
 	//run_loop_->Run();
 }
 
 void Thread::SetMessageLoop(MessageLoop * message_loop) {
-	assert(message_loop);
+	DCHECK(message_loop);
 	
-	assert(!IsRunning());
+	DCHECK(!IsRunning());
 	message_loop_ = message_loop;
-	assert(IsRunning());
+	DCHECK(IsRunning());
 
 	using_external_message_loop_ = true;
 }
@@ -151,14 +152,14 @@ void Thread::SetMessageLoop(MessageLoop * message_loop) {
 
 
 void Thread::ThreadMain() {
-	assert(kInvalidThreadId == id_);
+	DCHECK(kInvalidThreadId == id_);
 	id_ = PlatformThread::CurrentId();
-	assert(kInvalidThreadId != id_);
+	DCHECK(kInvalidThreadId != id_);
 	id_event_.notify_one();
 
 	PlatformThread::SetName(name_.c_str());
 
-	assert(message_loop_);
+	DCHECK(message_loop_);
 	//std::unique_ptr<MessageLoop> message_loop(message_loop_);
 	//message_loop->BindToCurrentThread();
 	//message_loop_->SetTimerSlack(message_loop_timer_slack_);
@@ -190,7 +191,7 @@ void Thread::ThreadMain() {
 }
 
 void Thread::ThreadQuitHelper() {
-	assert(run_loop_);
+	DCHECK(run_loop_);
 	//run_loop_->QuitWhenIdle();
 }
 

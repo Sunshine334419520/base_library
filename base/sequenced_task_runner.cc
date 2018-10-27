@@ -18,6 +18,8 @@ bool SequencedTaskRunner::PostNonNestableTask(const Location & from_here,
 									  std::chrono::milliseconds(0));
 }
 
+SequencedTaskRunner::~SequencedTaskRunner() = default;
+
 bool 
 SequencedTaskRunner::DeleteOrReleaseSoonInternal(const Location & from_here,
 												 void(*deleter)(const void *), 

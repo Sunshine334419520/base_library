@@ -16,7 +16,7 @@ namespace base {
 
 class BASE_EXPORT SingleThreadTaskRunner : public SequencedTaskRunner {
  public:
-	 bool BelongsToCurrentThread() const { return RunsTasksInCurrentSequence(); }
+	 bool BelongsToCurrentThread() { return RunsTasksInCurrentSequence(); }
 
  protected:
 	 ~SingleThreadTaskRunner() OVERRIDE = default;

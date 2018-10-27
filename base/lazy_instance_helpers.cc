@@ -17,6 +17,9 @@
 namespace base {
 namespace internal {
 
+void* kLazyInstanceStateCreating(new int(1));
+void* kLazyDefaultInstanceState = nullptr;
+
 bool NeedsLazyInstance(std::atomic<void*>* state) {
 	// 尝试去创建一个Instance,如果我们是是第一个到来的线程,返回true.
 	// 否则代表不是第一个线程到来，可能产生线程对数据对争抢.

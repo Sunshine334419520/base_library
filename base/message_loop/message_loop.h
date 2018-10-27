@@ -22,6 +22,9 @@
 #include "base/message_loop/message_pump_default.h"
 #include "base/pending_task.h"
 #include "base/threading/platform_thread.h"
+#include "base/single_thread_task_runner.h"
+#include "base/threading/thread_task_runner_handle.h"
+#include "base/message_loop/message_loop_task_runner.h"
 
 
 
@@ -80,17 +83,19 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
 	  public:
 		  virtual void WillDestroyCurrentMessageLoop() = 0;
 
-	  protected:
+	  public:
 		  virtual ~DestructionObserver();
 	 };
 
 	 // Add a DestructionObserver, which will start receiving notifications
 	 // immediately.
-	 void AddDestructionObserver(DestructionObserver* destruction_observer);
+	 void AddDestructionObserver(
+		 std::shared_ptr<DestructionObserver> destruction_observer);
 
 	 // Remove a DestructionObserver.  It is safe to call this method while a
 	 // DestructionObserver is receiving a notification callback.
-	 void RemoveDestructionObserver(DestructionObserver* destruction_observer);
+	 void RemoveDestructionObserver(
+		 std::shared_ptr<DestructionObserver> destruction_observer);
 
 	 // Deprecated: use RunLoop instead.
 	 // Construct a Closure that will call QuitWhenIdle(). Useful to schedule an
@@ -154,14 +159,15 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
 		  virtual ~TaskObserver() = default;
 	 };
 
-	 void AddTaskObserver(TaskObserver* task_observer);
-	 void RemoveTaskObserver(TaskObserver* task_observer);
+	 void AddTaskObserver(std::shared_ptr<TaskObserver> task_observer);
+	 void RemoveTaskObserver(std::shared_ptr<TaskObserver> task_observer);
 
 	 bool IsIdleForTesting();
 
+	 // 运行一个pending_task 任务.
 	 void RunTask(PendingTask* pending_task);
 
-	 void DisallowTaskObservers() { }
+	 void DisallowTaskObservers() { allow_task_observers_ = false; }
 
  protected:
 	 friend internal::IncomingTaskQueue;
@@ -171,17 +177,17 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
 	 std::unique_ptr<MessagePump> pump_;
 	 
 	 using MessagePumpFactoryCallback = 
-		 Callback<std::unique_ptr<MessagePump>()>;
+		 std::function<std::unique_ptr<MessagePump>(void)>;
 
 	 // 这个就是一个一般的protected constructor. 其他的constructors 会调用这个
 	 // constructor来进行initialization.
 	 // 一个子类可以直接调用这个constructor 来创建一个自定义的message_loop, 这个
 	 // 构造函数不会调用BindToCurrentThread, 如果这个constructor 是子类直接调用，
 	 // 那么必须在之后bind the message_loop.
-	 MessageLoop(Type type, MessagePumpFactory pump_factory);
+	 MessageLoop(Type type, MessagePumpFactoryCallback pump_factory);
 
 	 // 配置不同的成员并且绑定这个message_loop 到当前的thread.
-	 void BindTocurrentThread();
+	 void BindToCurrentThread();
 
 	 // 创建一个没有绑定到线程的MessageLoop.
 	 // If |type| is TYPE_CUSTOM non-null |pump_factory| must be also given
@@ -227,7 +233,7 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
 	 // A recent snapshot of Time::Now(), used to check delayed_work_queue_.
 	 std::chrono::milliseconds recent_time;
 
-	 std::list<DestructionObserver> destruction_observers_;
+	 std::list<std::shared_ptr<DestructionObserver>> destruction_observers_;
 
 	 // A boolean which prevents unintentional reentrant task execution (e.g. from
 	 // induced nested message loops). As such, nested message loops will only
@@ -243,7 +249,7 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
 	 // if type_ is TYPE_CUSTOM and pump_ is null.
 	 MessagePumpFactoryCallback pump_factory_;
 
-	 std::list<TaskObserver> task_observers_;
+	 std::list<std::shared_ptr<TaskObserver>> task_observers_;
 
 	 // 保存着当前正在处理的任务，没有别的意思
 	 const PendingTask* current_pending_task_ = nullptr;
@@ -251,12 +257,12 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
 	 std::shared_ptr<internal::IncomingTaskQueue> incoming_task_queue_;
 
 	 // 一个我们还没有绑定到thread 上的task runner.
-	 //std::shared_ptr<internal::MessageLoopTaskRunner> unbound_task_runner_;
+	 std::shared_ptr<internal::MessageLoopTaskRunner> unbound_task_runner_;
 
 
 	 // 这个task runner 和memssage lopp 关联.
-	 //std::shared_ptr<SingleThreadTaskRunner> task_runner_;
-	 //std::unique_ptr<ThreadTaskRunnerHandle> thread_task_runner_handle_;
+	 std::shared_ptr<SingleThreadTaskRunner> task_runner_;
+	 std::unique_ptr<ThreadTaskRunnerHandle> thread_task_runner_handle_;
 
 	 // 绑定到这个消息循环的线程的线程id, 只会在绑定线程到MessageLoop时会初始化一次
 	 // 在这之后这个thread_id_永远都不会改变.

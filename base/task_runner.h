@@ -62,7 +62,7 @@ class BASE_EXPORT TaskRunner {
                                  std::chrono::milliseconds delay) = 0;
                                  
 	 // 如果返回true，代表实在当前序列，或者说是绑定到的当前线程. 
-     virtual bool RunsTasksInCurrentSequence() const = 0;
+     virtual bool RunsTasksInCurrentSequence() = 0;
 
 	 // Posts |task| 到当前的TaskRunner，在任务运行完成之后，|reply| 会发送到
 	 // 调用这个PostTaskAndReply()的线程上， |task| and |reply|都需要保证在

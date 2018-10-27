@@ -12,6 +12,7 @@
 
 #include "base/lazy_instance.h"
 #include "base/logging.h"
+#include "base/threading/thread_task_runner_handle.h"
 
 namespace base {
 
@@ -31,14 +32,14 @@ SequencedTaskRunnerHandle::Get() {
 	if (handle)
 		return handle->task_runner_;
 
-	/*
 	// Note if you hit this: the problem is the lack of a sequenced context. The
 	// ThreadTaskRunnerHandle is just the last attempt at finding such a context.
-	CHECK(ThreadTaskRunnerHandle::IsSet())
+	CHECK(ThreadTaskRunnerHandle::IsSet());
+		/*
 		<< "Error: This caller requires a sequenced context (i.e. the "
 		"current task needs to run from a SequencedTaskRunner).";
+		*/
 	return ThreadTaskRunnerHandle::Get();
-	*/
 }
 
 bool SequencedTaskRunnerHandle::IsSet() {

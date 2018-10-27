@@ -94,113 +94,207 @@ IncomingTaskQueue::~IncomingTaskQueue() {
 	DCHECK(!message_loop_);
 }
 
-bool IncomingTaskQueue::PostPendingTask(PendingTask * pending_task)
-{
+bool IncomingTaskQueue::PostPendingTask(PendingTask * pending_task) {
+	bool accept_new_tasks;
+	bool schedule_work = false;
+
+	{
+		std::lock_guard<std::mutex> lock(incoming_queue_lock_);
+		accept_new_tasks = accept_new_tasks_;
+		if (accept_new_tasks) {
+			schedule_work =
+				PostPendingTaskLockRequired(pending_task);
+		}
+	}
+
+	if (!accept_new_tasks) {
+		DCHECK(!schedule_work);
+		pending_task->task = nullptr;
+		return false;
+	}
+
+	// 唤醒message loop 并且给他派遣工作
+	if (schedule_work) {
+		// 锁住message loop, 防止message loop被释放.
+		std::lock_guard<std::mutex> lock(message_loop_lock_);
+		if (message_loop_)
+			message_loop_->SchedueWork();
+	}
+
+	return true;
+}
+
+bool IncomingTaskQueue::PostPendingTaskLockRequired(PendingTask * pending_task) {
+	std::lock_guard<std::mutex> lock(incoming_queue_lock_);
+
+	pending_task->sequence_num = next_sequence_num_++;
+
+	bool was_empty = incoming_queue_.empty();
+	incoming_queue_.push(std::move(*pending_task));
+
+	// 当is_ready_for_schedulig_为true时，代表是已经调用了StartScheulig, 
+	// 如果always_schedule_work_为true，表示可以一直派遣工作，并且唤醒message loop
+	// 那样可以返回true，如果是第一个派遣工作也可以直接返回true.
+	if (is_ready_for_schedulig_ &&
+		(always_schedule_work_ || (!message_loop_scheduled_ && was_empty))) {
+		message_loop_scheduled_ = true;
+		return true;
+	}
+
 	return false;
 }
 
-bool IncomingTaskQueue::PostPendingTaskLockRequired(PendingTask * pending_task)
-{
-	return false;
-}
 
-int IncomingTaskQueue::ReloadWorkQueue(TaskQueue * work_queue)
-{
-	return 0;
+int IncomingTaskQueue::ReloadWorkQueue(TaskQueue * work_queue) {
+	// work queue 必须为空
+	DCHECK(work_queue->empty());
+
+	// 加锁
+	std::lock_guard<std::mutex> lock(incoming_queue_lock_);
+	if (incoming_queue_.empty()) {
+		// 如果incoming queue为空的话，那么就代表这个incoming queue里面没有
+		// 任何的任务，这种情况意味着将需要sleep然后等待任务到来，如果这个
+		// incoming queue不是空的，那么就重新派遣任务, 这样就可以将
+		// message_loop_scheduled_ 设置为false，让incoming queue不为空时，
+		// 可以派遣任务.
+		message_loop_scheduled_ = false;
+	}
+	else {
+		incoming_queue_.swap(*work_queue);
+	}
+
+	int high_res_tasks = high_res_task_count_;
+	high_res_task_count_ = 0;
+	return high_res_tasks;
 }
 
 IncomingTaskQueue::TriageQueue::TriageQueue(IncomingTaskQueue * outer)
 	: outer_(outer){
 }
 
-const PendingTask & IncomingTaskQueue::TriageQueue::Peek()
-{
-	// TODO: 在此处插入 return 语句
+IncomingTaskQueue::TriageQueue::~TriageQueue() = default;
+
+const PendingTask & IncomingTaskQueue::TriageQueue::Peek() {
+	ReloadFromIncomingQueueIfEmpty();
+	DCHECK(!queue_.empty());
+	return queue_.front();
 }
 
-PendingTask IncomingTaskQueue::TriageQueue::Pop()
-{
-	//return PendingTask();
+PendingTask IncomingTaskQueue::TriageQueue::Pop() {
+	ReloadFromIncomingQueueIfEmpty();
+	DCHECK(!queue_.empty());
+	PendingTask pending_task = std::move(queue_.front());
+	queue_.pop();
+
+	if (pending_task.is_high_res)
+		--outer_->pending_high_res_tasks_;
+	
+	return pending_task;
 }
 
-bool IncomingTaskQueue::TriageQueue::HasTasks()
-{
-	return false;
+bool IncomingTaskQueue::TriageQueue::HasTasks() {
+	ReloadFromIncomingQueueIfEmpty();
+	return !queue_.empty();
 }
 
-void IncomingTaskQueue::TriageQueue::Clear()
-{
+void IncomingTaskQueue::TriageQueue::Clear() {
+	while (!queue_.empty()) {
+		PendingTask pending_task = std::move(queue_.front());
+		queue_.pop();
+
+		if (pending_task.is_high_res)
+			--outer_->pending_high_res_tasks_;
+
+		if (pending_task.delayed_run_time.count()) {
+			outer_->delayed_tasks().Push(std::move(pending_task));
+		}
+	}
 }
 
-void IncomingTaskQueue::TriageQueue::ReloadFromIncomingQueueIfEmpty()
-{
+void IncomingTaskQueue::TriageQueue::ReloadFromIncomingQueueIfEmpty() {
+	if (queue_.empty()) {
+		outer_->pending_high_res_tasks_ += outer_->ReloadWorkQueue(&queue_);
+	}
 }
 
-IncomingTaskQueue::TriageQueue::~TriageQueue()
-{
-}
 
 IncomingTaskQueue::DelayedQueue::DelayedQueue(IncomingTaskQueue * outer)
 	: outer_(outer){
 }
 
-IncomingTaskQueue::DelayedQueue::~DelayedQueue()
-{
+IncomingTaskQueue::DelayedQueue::~DelayedQueue() = default;
+
+const PendingTask & IncomingTaskQueue::DelayedQueue::Peek() {
+	DCHECK(!queue_.empty());
+	return queue_.top();
 }
 
-const PendingTask & IncomingTaskQueue::DelayedQueue::Peek()
-{
-	// TODO: 在此处插入 return 语句
+PendingTask IncomingTaskQueue::DelayedQueue::Pop() {
+	DCHECK(!queue_.empty());
+	PendingTask delayed_task = std::move(const_cast<PendingTask&>(queue_.top()));
+	queue_.pop();
+
+	if (delayed_task.is_high_res)
+		--outer_->pending_high_res_tasks_;
+	return delayed_task;
 }
 
-PendingTask IncomingTaskQueue::DelayedQueue::Pop()
-{
-	//return PendingTask();
+bool IncomingTaskQueue::DelayedQueue::HasTasks() {
+	//return !queue_.empty();
+	while (!queue_.empty() && !Peek().task)
+		Pop();
+	
+	return !queue_.empty();
 }
 
-bool IncomingTaskQueue::DelayedQueue::HasTasks()
-{
-	return false;
+void IncomingTaskQueue::DelayedQueue::Clear() {
+	while (!queue_.empty())
+		Pop();
 }
 
-void IncomingTaskQueue::DelayedQueue::Clear()
-{
-}
+void IncomingTaskQueue::DelayedQueue::Push(PendingTask pending_task) {
+	if (pending_task.is_high_res)
+		++outer_->pending_high_res_tasks_;
 
-void IncomingTaskQueue::DelayedQueue::Push(PendingTask pending_task)
-{
+	queue_.push(std::move(pending_task));
 }
 
 IncomingTaskQueue::DeferredQueue::DeferredQueue(IncomingTaskQueue * outer)
 	: outer_(outer) {
 }
 
-IncomingTaskQueue::DeferredQueue::~DeferredQueue()
-{
+IncomingTaskQueue::DeferredQueue::~DeferredQueue() = default;
+
+const PendingTask & IncomingTaskQueue::DeferredQueue::Peek() {
+	DCHECK(!queue_.empty());
+	return queue_.front();
 }
 
-const PendingTask & IncomingTaskQueue::DeferredQueue::Peek()
-{
-	// TODO: 在此处插入 return 语句
-}
+PendingTask IncomingTaskQueue::DeferredQueue::Pop() {
+	DCHECK(!queue_.empty());
+	PendingTask deferred_task = std::move(queue_.front());
+	queue_.pop();
 
-PendingTask IncomingTaskQueue::DeferredQueue::Pop()
-{
-	//return PendingTask();
+	if (deferred_task.is_high_res)
+		--outer_->pending_high_res_tasks_;
 	
+	return deferred_task;
 }
 
-bool IncomingTaskQueue::DeferredQueue::HasTasks()
-{
-	return false;
+bool IncomingTaskQueue::DeferredQueue::HasTasks() {
+	return !queue_.empty();
 }
 
-void IncomingTaskQueue::DeferredQueue::Clear()
-{
+void IncomingTaskQueue::DeferredQueue::Clear() {
+	while (!queue_.empty())
+		Pop();
 }
 
-void IncomingTaskQueue::DeferredQueue::Push(PendingTask pending_task)
-{
+void IncomingTaskQueue::DeferredQueue::Push(PendingTask pending_task) {
+	if (pending_task.is_high_res)
+		++outer_->pending_high_res_tasks_;
+	
+	queue_.push(std::move(pending_task));
 }
 
 }	// namespace internal.

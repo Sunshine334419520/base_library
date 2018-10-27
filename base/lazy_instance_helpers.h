@@ -17,12 +17,12 @@ namespace base {
 
 namespace internal {
 
-	void* kLazyInstanceStateCreating(new int(1));
-	void* kLazyDefaultInstanceState = nullptr;
+extern void* kLazyInstanceStateCreating;
+extern void* kLazyDefaultInstanceState;
 
-	BASE_EXPORT bool NeedsLazyInstance(std::atomic<void*>* state);
-	BASE_EXPORT void CompleteLazyInstance(void(*destructor)(void*),
-										  void* destructor_arg);
+BASE_EXPORT bool NeedsLazyInstance(std::atomic<void*>* state);
+BASE_EXPORT void CompleteLazyInstance(void(*destructor)(void*),
+									  void* destructor_arg);
 
 
 } // internal
@@ -30,34 +30,30 @@ namespace internal {
 
 namespace subtle {
 
-	template <typename Type>
-	Type* GetOrCreateLazyPointer(std::atomic<Type*>* state,
-								 Type* (*creator_func)(void*),
-								 void* creator_arg,
-								 void(*destrucotr)(void*),
-								 void* destructor_arg) {
-		//std::atomic<void*> instance = state->load();
-		//auto instance = state->load();
-		std::atomic<Type*> instance(state->load(std::memory_order_acquire));
+template <typename Type>
+Type* GetOrCreateLazyPointer(std::atomic<Type*>* state,
+							 Type* (*creator_func)(void*),
+							 void* creator_arg,
+							 void(*destrucotr)(void*),
+							 void* destructor_arg) {
+	std::atomic<Type*> instance(state->load(std::memory_order_acquire));
 
-		if (!instance.load()) {
+	if (!instance.load()) {
 
-			//state->compare_exchange_strong(nullptr, const_cast<void*>(internal::kLazyInstanceStateCreating));
-			if (internal::NeedsLazyInstance(reinterpret_cast<std::atomic<void*>*>(state))) {
-				instance = (*creator_func)(creator_arg);
+		//state->compare_exchange_strong(nullptr, const_cast<void*>(internal::kLazyInstanceStateCreating));
+		if (internal::NeedsLazyInstance(reinterpret_cast<std::atomic<void*>*>(state))) {
+			instance = (*creator_func)(creator_arg);
 
-				state->store(instance.load(), std::memory_order_release);
+			state->store(instance.load(), std::memory_order_release);
 
-				//if (destrucotr)
-				internal::CompleteLazyInstance(destrucotr, destructor_arg);
-
-			}
-			else {
-				instance = state->load(std::memory_order_acquire);
-			}
+			internal::CompleteLazyInstance(destrucotr, destructor_arg);
 		}
-		return reinterpret_cast<Type*>(instance.load());
+		else {
+			instance = state->load(std::memory_order_acquire);
+		}
 	}
+	return reinterpret_cast<Type*>(instance.load());
+}
 
 
 }   // namespace subtle.
