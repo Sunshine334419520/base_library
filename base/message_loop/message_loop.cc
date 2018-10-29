@@ -12,6 +12,7 @@
 
 #include "base/message_loop/message_pump_default.h"
 #include "base/logging.h"
+#include "base/ptr_util.h"
 
 namespace base {
 
@@ -25,8 +26,8 @@ MessageLoop* GetTLSMessageLoop() {
 
 MessageLoop::MessagePumpFactory* messge_pump_for_ui_factory_ = NULL;
 
-std::unique_ptr<MessagePump> ReturnPump(std::unique_ptr<MessagePump>& pump) {
-		return std::move(pump);
+std::unique_ptr<MessagePump> ReturnPump(MessagePump* pump) {
+	return WrapUnique(std::move(pump));
 }
 
 }	// namespace .
@@ -37,10 +38,10 @@ MessageLoop::MessageLoop(Type type)
 }
 
 MessageLoop::MessageLoop(std::unique_ptr<MessagePump> pump)
-	: MessageLoop(TYPE_CUSTOM, std::bind(&ReturnPump, std::move(pump))) {
+	: MessageLoop(TYPE_CUSTOM, std::bind(&ReturnPump, pump.release())) {
 	BindToCurrentThread();
 
-	pump_factory_ = std::bind(&ReturnPump, std::move(pump));
+	//pump_factory_ = std::bind(&ReturnPump, pump);
 }
 
 MessageLoop::~MessageLoop()
@@ -140,9 +141,9 @@ MessageLoop::MessageLoop(Type type,
 						 MessagePumpFactoryCallback pump_factory)
 	: type_(type),
 	  pump_factory_(std::move(pump_factory)),
-	  incoming_task_queue_(new internal::IncomingTaskQueue(this)),
+	  incoming_task_queue_(WrapShared(new internal::IncomingTaskQueue(this))),
 	  unbound_task_runner_(
-		new internal::MessageLoopTaskRunner(incoming_task_queue_)),
+		WrapShared(new internal::MessageLoopTaskRunner(incoming_task_queue_))),
 	  task_runner_(unbound_task_runner_){
 	// 如果类型是TYPE_CUSTOM 那么pump_factory 必须不为空.
 	DCHECK(type_ != TYPE_CUSTOM || !pump_factory_);

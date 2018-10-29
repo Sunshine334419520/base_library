@@ -18,9 +18,13 @@
 
 
 namespace base {
+
+struct DefaultDestroyTraits;
+
 namespace internal {
 
 class IncomingTaskQueue;
+
 
 class BASE_EXPORT MessageLoopTaskRunner : public SingleThreadTaskRunner {
  public:
@@ -41,6 +45,8 @@ class BASE_EXPORT MessageLoopTaskRunner : public SingleThreadTaskRunner {
 	virtual bool RunsTasksInCurrentSequence() OVERRIDE;
 
  private:
+	 friend struct DefaultDestroyTraits;
+
 	 ~MessageLoopTaskRunner() OVERRIDE;
 
 	 std::shared_ptr<IncomingTaskQueue> incoming_queue_;

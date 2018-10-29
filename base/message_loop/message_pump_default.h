@@ -42,7 +42,7 @@ class BASE_EXPORT MessagePumpDefault : public MessagePump {
 	 // the time at which we should call DodelayedWork.
 	 std::chrono::milliseconds delayed_work_time_;
 
-	 DISALLOW_COPY_AND_ASSIGN(MessagePumpDefault);
+	 //DISALLOW_COPY_AND_ASSIGN(MessagePumpDefault);
 	 
 };
 

@@ -233,6 +233,7 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
 	 // A recent snapshot of Time::Now(), used to check delayed_work_queue_.
 	 std::chrono::milliseconds recent_time;
 
+
 	 std::list<std::shared_ptr<DestructionObserver>> destruction_observers_;
 
 	 // A boolean which prevents unintentional reentrant task execution (e.g. from

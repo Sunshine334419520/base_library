@@ -10,6 +10,7 @@
 
 #include <chrono>
 #include <mutex>
+#include <memory>
 
 #include "base/base_export.h"
 #include "base/callback.h"
@@ -20,6 +21,7 @@ namespace base {
 
 class MessageLoop;
 class PostTaskTest;
+struct DefaultDestroyTraits;
 
 namespace internal {
 
@@ -95,7 +97,10 @@ class IncomingTaskQueue {
 		 return pending_high_res_tasks_ > 0;
 	 }
 
+
  private:
+	 friend struct DefaultDestroyTraits;
+
 	 // 下面这三个队列，都是用于message loop中保存需要运行的消息的对应队列.
 	 // 一个保存着普通的任务队列, 一个保存着延迟任务队列, 一个保存着闲置任务队列.
 	 class TriageQueue : public ReadAndRemoveOnlyQueue {
@@ -161,6 +166,7 @@ class IncomingTaskQueue {
 		  DISALLOW_COPY_AND_ASSIGN(DeferredQueue);
 	 };
 
+	 
 	 virtual ~IncomingTaskQueue();
 
 	 // 添加一个任务到 incoming queue. 调用者可以继续保持这个pending_task,
