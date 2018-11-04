@@ -111,6 +111,26 @@ void MessageLoop::SetNestableTasksAllowed(bool allowed) {
 	task_execution_allowed_ = allowed;
 }
 
+void MessageLoop::Run(bool application_tasks_allowed) {
+	if (application_tasks_allowed && !task_execution_allowed_) {
+		task_execution_allowed_ = true;
+		pump_->Run(this);
+		task_execution_allowed_ = false;
+	}
+	else {
+		pump_->Run(this);
+	}
+}
+
+void MessageLoop::Quit() {
+	pump_->Quit();
+}
+
+void MessageLoop::EnsureWorkScheduled() {
+	if (incoming_task_queue_->triage_tasks().HasTasks())
+    	pump_->ScheduleWork();
+}
+
 bool MessageLoop::NestableTasksAllowed() const {
 	return task_execution_allowed_;
 }
@@ -167,7 +187,7 @@ void MessageLoop::BindToCurrentThread() {
 	SetThreadTaskRunnerHandle();
 	thread_id_ = PlatformThread::CurrentId();
 	
-	//run_loop_client_ = RunLoop::RegisterDelegateForCurrentThread(this);
+	RunLoop::RegisterDelegateForCurrentThread(this);
 }
 
 std::unique_ptr<MessageLoop>
@@ -208,13 +228,12 @@ void MessageLoop::RunTask(PendingTask * pending_task) {
 
 bool MessageLoop::DeferOrRunPendingTask(PendingTask pending_task) {
 	// 添加到闲置任务，或者直接运行任务.
-	/*
 	if (pending_task.nestable == Nestable::kNestable ||
-		!run_loop_client_->IsNested()) {
+		!RunLoop::IsNestedOnCurrentThread()) {
 		RunTask(&pending_task);
 		return true;
 	}
-	*/
+	
 
 	// 我们现在不能运行任务，因为我们现在处于一个nested run loop中,
 	// 而且我们的任务还是一个no nestable, 所以我们不能运行这个任务，
@@ -308,10 +327,10 @@ bool MessageLoop::DoIdleWork() {
 	if (ProcessNextDelayedNoNestableTask())
 		return true;
 
-	/*
-	if (run_loop_client_->ShouldQuitWhenIdle())
+	
+	if (ShouldQuitWhenIdle())
 		pump_->Quit();
-		*/
+		
 
 	return false;
 }

@@ -25,12 +25,14 @@
 #include "base/single_thread_task_runner.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/message_loop/message_loop_task_runner.h"
+#include "base/run_loop.h"
 
 
 
 namespace base {
 
-class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
+class BASE_EXPORT MessageLoop : public MessagePump::Delegate,
+								public RunLoop::Delegate {
  public:
 	 // A MessageLoop has a particular type, which indicates the set of
 	 // asynchronous events it may process in addition to tasks and timers.
@@ -205,9 +207,9 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
 	 void SetThreadTaskRunnerHandle();
 
 	 // RunLoop::Delegate:
-	 //void Run(bool application_tasks_allowed) OVERRIDE;
-	 //void Quit() OVERRIDE;
-	 //void EnsureWorkScheduled() OVERRIDE;
+	 void Run(bool application_tasks_allowed) OVERRIDE;
+	 void Quit() OVERRIDE;
+	 void EnsureWorkScheduled() OVERRIDE;
 
 	 // Called to process any delayed non-nestable tasks.
 	 bool ProcessNextDelayedNoNestableTask();

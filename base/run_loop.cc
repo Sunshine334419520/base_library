@@ -81,7 +81,7 @@ void RunLoop::Run() {
 	DCHECK_EQ(this, delegate_->active_run_loops_.top());
 	const bool application_tasks_allowed =
 		delegate_->active_run_loops_.size() == 1U ||
-		type_ == Type::kNestableTasksAllowed;
+		type_ == Type:: ;
 	delegate_->Run(application_tasks_allowed);
 
 	AfterRun();
@@ -153,6 +153,96 @@ void RunLoop::AddNestingObserverOnCurrentThread(NestingObserver* observer) {
 	DCHECK(delegate);
 	delegate->nesting_observers_.push_back(
 		std::shared_ptr<NestingObserver>(std::move(observer)));
+}
+
+// static.
+void RunLoop::RemoveNestingObserverOnCurrentThread(NestingObserver* observer) {
+	Delegate* delegate = tls_delegate.Pointer();
+	DCHECK(delegate);
+	delegate->nesting_observers_.RemoveObserver(observer);
+}
+
+// static.
+void RunLoop::QuitCurrentDeprecated() {
+	DCHECK(IsRunningOnCurrentThread());
+	Delegate* delegate = tls_delegate.Pointer();
+	DCHECK(delegate->active_run_loops_.top()->allow_quit_current_deprecated_);
+	delegate->active_run_loops_.top()->QuitWhenIdle();
+}
+
+// static
+Closure RunLoop::QuitCurrentWhenIdleClosureDeprecated() {
+  // TODO(844016): Fix callsites and enable this check, or remove the API.
+  // Delegate* delegate = tls_delegate.Get().Get();
+  // DCHECK(delegate->active_run_loops_.top()->allow_quit_current_deprecated_)
+  //     << "Please migrate off QuitCurrentWhenIdleClosureDeprecated(), e.g to "
+  //        "QuitWhenIdleClosure().";
+  return Bind(&RunLoop::QuitCurrentWhenIdleDeprecated);
+}
+
+#if DCHECK_IS_ON()
+RunLoop::ScopedDisallowRunningForTesting::ScopedDisallowRunningForTesting()
+    : current_delegate_(tls_delegate.Get().Get()),
+      previous_run_allowance_(
+          current_delegate_ ? current_delegate_->allow_running_for_testing_
+                            : false) {
+  if (current_delegate_)
+    current_delegate_->allow_running_for_testing_ = false;
+}
+
+RunLoop::ScopedDisallowRunningForTesting::~ScopedDisallowRunningForTesting() {
+  DCHECK_EQ(current_delegate_, tls_delegate.Get().Get());
+  if (current_delegate_)
+    current_delegate_->allow_running_for_testing_ = previous_run_allowance_;
+}
+#else   // DCHECK_IS_ON()
+// Defined out of line so that the compiler doesn't inline these and realize
+// the scope has no effect and then throws an "unused variable" warning in
+// non-dcheck builds.
+RunLoop::ScopedDisallowRunningForTesting::ScopedDisallowRunningForTesting() =
+    default;
+RunLoop::ScopedDisallowRunningForTesting::~ScopedDisallowRunningForTesting() =
+    default;
+#endif  // DCHECK_IS_ON()
+
+bool RunLoop::BeforeRun() {
+	if (quit_called_)
+		return false;
+
+		auto& active_run_loops_ = delegate_->active_run_loops_;
+		active_run_loops_.push(this);
+
+		const bool is_nested = active_run_loop_.size() > 1;
+
+		if (is_nested) {
+			for (auto& observer : delegate_->nesting_observers)
+				observer.OnBeginNestedRunLoop();
+			if (type_ == Type::KNestableTasksAllowed)
+				delegate_->EnsureWorkScheduled();
+		}
+
+		running_ = true;
+		return true;
+}
+
+void RunLoop::AfterRun() {
+	running_ = false;
+
+	auto& active_run_loops_ = delegate_->active_run_loops_;
+	DCHECK_EQ(active_run_loops_.top(), this);
+	active_run_loops_.pop();
+
+	RunLoop* previous_run_loop = 
+		active_run_loops_.empty() ? nullptr : active_run_loops_.top();
+	
+	if (previous_run_loop) {
+		for (auto& observer : delegate_->nesting_observers_) 
+			observer.OnExitNestedRunLoop();
+	}
+
+	// Execute deferred Quit, if any:
+	if (preious_run_loop && previous_run_loop->quit_called_)
+		delegte_->Quit();
 }
 
 
