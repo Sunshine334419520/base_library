@@ -11,6 +11,7 @@
 #include <thread>
 
 #include "base/message_loop/message_pump_default.h"
+#include "base/single_thread_task_runner.h"
 #include "base/logging.h"
 #include "base/ptr_util.h"
 
@@ -94,6 +95,11 @@ bool MessageLoop::IsType(Type type) const {
 std::string MessageLoop::GetThreadName() const
 {
 	return std::string();
+}
+
+void MessageLoop::SetTaskRunner(const std::shared_ptr<SingleThreadTaskRunner>& task_runner)
+{
+	task_runner_ = task_runner;
 }
 
 void MessageLoop::ClearTaskRunnerForTesting()

@@ -75,8 +75,8 @@ class BASE_EXPORT RunLoop {
 	//	RunLoop run_loop;
 	// PostTask(run_loop.QuitClosure());
 	// run_loop.Run();
-	base::Closure QuitClosure();
-	base::Closure QuitWhenIdleClosure();
+	auto QuitClosure();
+	auto QuitWhenIdleClosure();
 
 	// 如果又一个RunLoop活跃在当前线程，那么就返回true, 这个是安全的在还没调用
 	// RegisterDelegateForCurrentThread(). 之后也是安全的.
@@ -100,8 +100,10 @@ class BASE_EXPORT RunLoop {
 
 	};
 
-	static void AddNestingObserverOnCurrentThread(NestingObserver* observer);
-	static void RemoveNestingObserverOnCurrentThread(NestingObserver* observer);
+	static void AddNestingObserverOnCurrentThread(
+		std::shared_ptr<NestingObserver> observer);
+	static void RemoveNestingObserverOnCurrentThread(
+		std::shared_ptr<NestingObserver> observer);
 
 	class BASE_EXPORT Delegate {
 	 public:

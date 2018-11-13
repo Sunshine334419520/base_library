@@ -21,14 +21,14 @@ namespace base {
 
 namespace {
 
-thread_local LazyInstance<RunLoop::Delegate>::Leaky tls_delegate =
+thread_local LazyInstance<RunLoop::Delegate*>::Leaky tls_delegate =
 	LAZY_INSTANCE_INITIALIZER;
 
 // 如果任务是运行在当前的序列上就直接运行他，否则的话就传递这个任务.
 void ProxyToTaskRunner(std::shared_ptr<SequencedTaskRunner> task_runner,
 					   Closure closure) {
 	if (task_runner->RunsTasksInCurrentSequence()) {
-		std::move(closure).operator();
+		std::move(closure)();
 		return;
 	}
 	task_runner->PostTask(FROM_HERE, std::move(closure));
@@ -56,13 +56,17 @@ void RunLoop::RegisterDelegateForCurrentThread(Delegate* delegate) {
 
 	// 可能在之前这个线程已经绑定过了，这样会报错.
 	DCHECK(!tls_delegate.Pointer());
-	tls_delegate.private_instance_.store(delegate,
+	tls_delegate.private_instance_.store(&delegate,
 										 std::memory_order_acq_rel);
+	/*
+	auto tmp = tls_delegate.Get();
+	tmp = delegate;
+	*/
 	delegate->bound_ = true;
 }
 
 RunLoop::RunLoop(Type type)
-	: delegate_(tls_delegate.Pointer()),
+	: delegate_(tls_delegate.Get()),
    	  type_(type),
 	  origin_task_runner_(ThreadTaskRunnerHandle::Get()),
 	  weak_factory_(std::shared_ptr<RunLoop>(std::move(this))) {
@@ -81,7 +85,7 @@ void RunLoop::Run() {
 	DCHECK_EQ(this, delegate_->active_run_loops_.top());
 	const bool application_tasks_allowed =
 		delegate_->active_run_loops_.size() == 1U ||
-		type_ == Type:: ;
+		type_ == Type::kNestableTasksAllowed;
 	delegate_->Run(application_tasks_allowed);
 
 	AfterRun();
@@ -121,14 +125,14 @@ void RunLoop::QuitWhenIdle() {
 	quit_when_idle_received_ = true;
 }
 
-base::Closure RunLoop::QuitClosure() {
+auto RunLoop::QuitClosure() {
 	allow_quit_current_deprecated_ = false;
 
 	return std::bind(&ProxyToTaskRunner, origin_task_runner_,
-					 std::bind(&RunLoop::Quit, weak_factory_));
+					 std::bind(&RunLoop::Quit, this));
 }
 
-base::Closure RunLoop::QuitWhenIdleClosure() {
+auto RunLoop::QuitWhenIdleClosure() {
 	allow_quit_current_deprecated_ = false;
 
 	return std::bind(&ProxyToTaskRunner, origin_task_runner_,
@@ -137,35 +141,43 @@ base::Closure RunLoop::QuitWhenIdleClosure() {
 
 // static.
 bool RunLoop::IsRunningOnCurrentThread() {
-	Delegate* delegate = tls_delegate.Pointer();
+	Delegate* delegate = tls_delegate.Get();
 	return delegate && !delegate->active_run_loops_.empty();
 }
 
 // static.
 bool RunLoop::IsNestedOnCurrentThread() {
-	Delegate* delegate = tls_delegate.Pointer();
+	Delegate* delegate = tls_delegate.Get();
 	return delegate && delegate->active_run_loops_.size() > 1;
 }
 
 // static.
-void RunLoop::AddNestingObserverOnCurrentThread(NestingObserver* observer) {
-	Delegate* delegate = tls_delegate.Pointer();
+void RunLoop::AddNestingObserverOnCurrentThread(
+	std::shared_ptr<NestingObserver> observer) {
+	Delegate* delegate = tls_delegate.Get();
 	DCHECK(delegate);
-	delegate->nesting_observers_.push_back(
-		std::shared_ptr<NestingObserver>(std::move(observer)));
+	delegate->nesting_observers_.push_back(std::move(observer));
 }
 
 // static.
-void RunLoop::RemoveNestingObserverOnCurrentThread(NestingObserver* observer) {
-	Delegate* delegate = tls_delegate.Pointer();
+void RunLoop::RemoveNestingObserverOnCurrentThread(
+	std::shared_ptr<NestingObserver> observer) {
+	Delegate* delegate = tls_delegate.Get();
 	DCHECK(delegate);
-	delegate->nesting_observers_.RemoveObserver(observer);
+	delegate->nesting_observers_.push_back(std::move(observer));
 }
 
 // static.
 void RunLoop::QuitCurrentDeprecated() {
 	DCHECK(IsRunningOnCurrentThread());
-	Delegate* delegate = tls_delegate.Pointer();
+	Delegate* delegate = tls_delegate.Get();
+	DCHECK(delegate->active_run_loops_.top()->allow_quit_current_deprecated_);
+	delegate->active_run_loops_.top()->QuitWhenIdle();
+}
+
+void RunLoop::QuitCurrentWhenIdleDeprecated() {
+	DCHECK(IsRunningOnCurrentThread());
+	Delegate* delegate = tls_delegate.Get();
 	DCHECK(delegate->active_run_loops_.top()->allow_quit_current_deprecated_);
 	delegate->active_run_loops_.top()->QuitWhenIdle();
 }
@@ -177,33 +189,8 @@ Closure RunLoop::QuitCurrentWhenIdleClosureDeprecated() {
   // DCHECK(delegate->active_run_loops_.top()->allow_quit_current_deprecated_)
   //     << "Please migrate off QuitCurrentWhenIdleClosureDeprecated(), e.g to "
   //        "QuitWhenIdleClosure().";
-  return Bind(&RunLoop::QuitCurrentWhenIdleDeprecated);
+  return std::bind(&RunLoop::QuitCurrentWhenIdleDeprecated);
 }
-
-#if DCHECK_IS_ON()
-RunLoop::ScopedDisallowRunningForTesting::ScopedDisallowRunningForTesting()
-    : current_delegate_(tls_delegate.Get().Get()),
-      previous_run_allowance_(
-          current_delegate_ ? current_delegate_->allow_running_for_testing_
-                            : false) {
-  if (current_delegate_)
-    current_delegate_->allow_running_for_testing_ = false;
-}
-
-RunLoop::ScopedDisallowRunningForTesting::~ScopedDisallowRunningForTesting() {
-  DCHECK_EQ(current_delegate_, tls_delegate.Get().Get());
-  if (current_delegate_)
-    current_delegate_->allow_running_for_testing_ = previous_run_allowance_;
-}
-#else   // DCHECK_IS_ON()
-// Defined out of line so that the compiler doesn't inline these and realize
-// the scope has no effect and then throws an "unused variable" warning in
-// non-dcheck builds.
-RunLoop::ScopedDisallowRunningForTesting::ScopedDisallowRunningForTesting() =
-    default;
-RunLoop::ScopedDisallowRunningForTesting::~ScopedDisallowRunningForTesting() =
-    default;
-#endif  // DCHECK_IS_ON()
 
 bool RunLoop::BeforeRun() {
 	if (quit_called_)
@@ -212,12 +199,12 @@ bool RunLoop::BeforeRun() {
 		auto& active_run_loops_ = delegate_->active_run_loops_;
 		active_run_loops_.push(this);
 
-		const bool is_nested = active_run_loop_.size() > 1;
+		const bool is_nested = active_run_loops_.size() > 1;
 
 		if (is_nested) {
-			for (auto& observer : delegate_->nesting_observers)
-				observer.OnBeginNestedRunLoop();
-			if (type_ == Type::KNestableTasksAllowed)
+			for (auto& observer : delegate_->nesting_observers_)
+				observer->OnBeginNestedRunLoop();
+			if (type_ == Type::kNestableTasksAllowed)
 				delegate_->EnsureWorkScheduled();
 		}
 
@@ -237,12 +224,12 @@ void RunLoop::AfterRun() {
 	
 	if (previous_run_loop) {
 		for (auto& observer : delegate_->nesting_observers_) 
-			observer.OnExitNestedRunLoop();
+			observer->OnExitNestedRunLoop();
 	}
 
 	// Execute deferred Quit, if any:
-	if (preious_run_loop && previous_run_loop->quit_called_)
-		delegte_->Quit();
+	if (previous_run_loop && previous_run_loop->quit_called_)
+		delegate_->Quit();
 }
 
 

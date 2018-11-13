@@ -1,10 +1,22 @@
 ﻿#include "base/threading/thread.h"
 
 #include <cassert>
+#include <thread>
 
 #include "base/logging.h"
+#include "base/threading/thread_task_runner_handle.h"
+#include "base/run_loop.h"
+#include "base/location.h"
+#include "base/logging.h"
+#include "base/lazy_instance.h"
 
 namespace base {
+
+namespace {
+
+thread_local base::LazyInstance<bool>::Leaky lazy_tls_bool =
+	LAZY_INSTANCE_INITIALIZER;
+}	// namespace .
 
 Thread::Options::Options() = default;
 
@@ -104,7 +116,7 @@ void Thread::StopSoon() {
 		return;
 	}
 
-	//task_runner()->PostTask(FROM_HERE, std::bind(&Thread::ThreadQuitHelper, this));
+	task_runner()->PostTask(FROM_HERE, std::bind(&Thread::ThreadQuitHelper, this));
 }
 
 PlatformThreadId Thread::GetThreadId() const {
@@ -114,9 +126,6 @@ PlatformThreadId Thread::GetThreadId() const {
 }
 
 PlatformThreadHandle Thread::GetThreadHandle() {
-	//return thread_.native_handle();
-	//thread_.native_handle();
-	//std::thread::native_handle();
 	std::lock_guard<std::mutex> lock(thread_mutex_);
 	
 	return is_thread_valid_ ? thread_.native_handle() : nullptr;
@@ -132,9 +141,24 @@ bool Thread::IsRunning() const {
 
 void Thread::Run(RunLoop * run_loop) {
 	DCHECK(id_ == PlatformThread::CurrentId());
-	//DCHECK(is_thread_valid_);
+	DCHECK(is_thread_valid_);
 
-	//run_loop_->Run();
+	run_loop_->Run();
+}
+
+// static.
+void Thread::SetThreadWasQuitProperly(bool flag) {
+	auto tmp = lazy_tls_bool.Get();
+	tmp = flag;
+}
+
+// static.
+bool Thread::GetThreadWasQuitProperly() {
+	bool quit_properly = true;
+#ifndef NDEBUG
+	quit_properly = lazy_tls_bool.Get();
+#endif
+	return quit_properly;
 }
 
 void Thread::SetMessageLoop(MessageLoop * message_loop) {
@@ -160,8 +184,8 @@ void Thread::ThreadMain() {
 	PlatformThread::SetName(name_.c_str());
 
 	DCHECK(message_loop_);
-	//std::unique_ptr<MessageLoop> message_loop(message_loop_);
-	//message_loop->BindToCurrentThread();
+	std::unique_ptr<MessageLoop> message_loop(message_loop_);
+	message_loop_->BindToCurrentThread();
 	//message_loop_->SetTimerSlack(message_loop_timer_slack_);
 
 	// Let the thread do extra initialization.
@@ -174,8 +198,8 @@ void Thread::ThreadMain() {
 
 	start_event_.notify_one();
 
-	//RunLoop run_loop;
-	//run_loop_ = &run_loop;
+	RunLoop run_loop;
+	run_loop_ = &run_loop;
 	Run(run_loop_);
 
 	{
@@ -192,7 +216,7 @@ void Thread::ThreadMain() {
 
 void Thread::ThreadQuitHelper() {
 	DCHECK(run_loop_);
-	//run_loop_->QuitWhenIdle();
+	run_loop_->QuitWhenIdle();
 }
 
 }	// namespace 

@@ -17,6 +17,7 @@
 #include "base/base_export.h"
 #include "base/callback.h"
 #include "base/macor.h"
+//#include "base/threading/thread.h"
 #include "base/message_loop/incoming_task_queue.h"
 #include "base/message_loop/message_pump.h"
 #include "base/message_loop/message_pump_default.h"
@@ -119,14 +120,17 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate,
 	 std::string GetThreadName() const;
 
 	 // Gets the TaskRunner associated with this message loop.
-	 //const std::shared_ptr<SingleThreadTaksRunner>& task_runner();
+	 const std::shared_ptr<SingleThreadTaskRunner>& task_runner() {
+		 return task_runner_;
+	 }
+
 
 	 // Sets a new TaskRunner for this message loop. The message loop must already
 	 // have been bound to a thred prior to this call, and the task runner must
 	 // belong to that thread. Note that changing the task runner will also affect
 	 // the ThreadTaskRunnerHandle for the target thread. Must be called on the
 	 // thread to which the message loop is bound.
-	 //void SetTaskRunner(const std::shared_ptr<SingleThreadTaksRunner>& task_runner);
+	 void SetTaskRunner(const std::shared_ptr<SingleThreadTaskRunner>& task_runner);
 
 	 // Clears task_runner() and the ThreadTaskRunnerHandle for the target thread.
 	 // Must be called on the thread to which the message loop is bound.
@@ -172,9 +176,9 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate,
 	 void DisallowTaskObservers() { allow_task_observers_ = false; }
 
  protected:
-	 friend internal::IncomingTaskQueue;
-	 friend PendingTask;
-	 //friend Thread;
+	 friend class internal::IncomingTaskQueue;
+	 friend struct PendingTask;
+	 friend class Thread;
 
 	 std::unique_ptr<MessagePump> pump_;
 	 

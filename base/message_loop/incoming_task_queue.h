@@ -19,9 +19,8 @@
 
 namespace base {
 
-class MessageLoop;
-class PostTaskTest;
 struct DefaultDestroyTraits;
+class MessageLoop;
 
 namespace internal {
 

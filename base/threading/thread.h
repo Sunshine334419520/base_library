@@ -19,7 +19,10 @@
 #include "base/base_export.h"
 #include "base/callback.h"
 #include "base/macor.h"
+#include "base/message_loop/message_loop.h"
 #include "base/threading/platform_thread.h"
+#include "base/single_thread_task_runner.h"
+
 
 //std::packaged_task<std::function<void()>>
 
@@ -27,7 +30,6 @@ namespace base {
 
 class MessagePump;
 class RunLoop;
-class MessageLoop;
 
 class BASE_EXPORT Thread : PlatformThread::Delegate {
  public:
@@ -71,6 +73,12 @@ class BASE_EXPORT Thread : PlatformThread::Delegate {
 		 return message_loop_;
 	 }
 
+	 std::shared_ptr<SingleThreadTaskRunner> task_runner() const {
+		 return message_loop_ ? message_loop_->task_runner() : nullptr;
+	 }
+
+	 const std::string& thread_name() const { return name_; }
+
 	 PlatformThreadId GetThreadId() const;
 
 	 PlatformThreadHandle GetThreadHandle() ;
@@ -84,8 +92,8 @@ class BASE_EXPORT Thread : PlatformThread::Delegate {
 	 
 	 virtual void CleanUp() {}
 
-	 //static void SetThreadWasQuitProperly(bool flag);
-	 //static void GetThreadWasQuitProperly();
+	 static void SetThreadWasQuitProperly(bool flag);
+	 static bool GetThreadWasQuitProperly();
 
 	 void SetMessageLoop(MessageLoop* message_loop);
 
@@ -98,8 +106,6 @@ class BASE_EXPORT Thread : PlatformThread::Delegate {
 	 void ThreadMain() OVERRIDE;
 
 	 void ThreadQuitHelper();
-
-	 //void ThreadQuitHelper();
 
 	 bool joinable_ = true;
 
