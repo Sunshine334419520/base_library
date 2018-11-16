@@ -21,8 +21,8 @@ namespace {
 class PostTaskAndReplyRelay {
  public:
 	 PostTaskAndReplyRelay(const Location& from_here,
-						   Closure task,
-						   Closure reply)
+						   OnceClosure task,
+						   OnceClosure reply)
 		 : from_here_(from_here),
 		   origin_task_runner_(SequencedTaskRunnerHandle::Get()),
 		   reply_(std::move(reply)),
@@ -33,28 +33,28 @@ class PostTaskAndReplyRelay {
 	 }
 
 	 void RunTaskAndPostReply() {
-		 std::move(task_)();
+		 std::move(task_).Run();
 
 		 
 		 origin_task_runner_->PostTask(from_here_,
-									   std::bind(&PostTaskAndReplyRelay::RunReplyAndSelfDestruct,
-									   this));
+			BindOnceClosure(&PostTaskAndReplyRelay::RunReplyAndSelfDestruct,
+							this));
 									   
 	 }
  private:
 	 void RunReplyAndSelfDestruct() {
 		 
-		 DCHECK_NULL(task_);
+		 DCHECK(task_.is_null()); 
 
-		 std::move(reply_)();
+		 std::move(reply_).Run();
 
 		 delete this;
 	 }
 
 	 const Location from_here_;
 	 const std::shared_ptr<SequencedTaskRunner> origin_task_runner_;
-	 Closure reply_;
-	 Closure task_;
+	 OnceClosure reply_;
+	 OnceClosure task_;
 
 };
 
@@ -63,10 +63,10 @@ class PostTaskAndReplyRelay {
 namespace internal {
 
 bool PostTaskAndReplayImpl::PostTaskAndReply(const Location& from_here,
-                                            Closure task,
-                                            Closure reply) {
-    DCHECK_NOTNULL(task);
-    DCHECK_NOTNULL(reply);
+                                             OnceClosure task,
+                                             OnceClosure reply) {
+	DCHECK(!task.is_null());
+	DCHECK(!reply.is_null());
 
 	/*
     return PostTask(from_here,
@@ -79,7 +79,7 @@ bool PostTaskAndReplayImpl::PostTaskAndReply(const Location& from_here,
 		new PostTaskAndReplyRelay(from_here, std::move(task), std::move(reply));
 
 	if (!PostTask(from_here,
-		std::bind(&PostTaskAndReplyRelay::RunTaskAndPostReply, relay))) {
+		BindOnceClosure(&PostTaskAndReplyRelay::RunTaskAndPostReply, relay))) {
 		delete relay;
 		return false;
 	}

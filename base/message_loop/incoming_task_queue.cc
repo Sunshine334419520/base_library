@@ -40,10 +40,10 @@ IncomingTaskQueue::IncomingTaskQueue(MessageLoop * message_loop)
 }
 
 bool IncomingTaskQueue::AddToIncomingQueue(const Location & from_here,
-										   Closure task,
+										   OnceClosure task,
 										   std::chrono::milliseconds delay,
 										   Nestable nestable) {
-	CHECK_NOTNULL(task);
+	CHECK(!task);
 
 	PendingTask pending_task(from_here, std::move(task),
 							 CalculateDelayedRuntime(delay), nestable);
@@ -86,7 +86,7 @@ void IncomingTaskQueue::StartScheduling() {
 
 void IncomingTaskQueue::RunTask(PendingTask * pending_task) {
 	// 运行任务.
-	std::move(pending_task->task)();
+	std::move(pending_task->task).Run();
 }
 
 IncomingTaskQueue::~IncomingTaskQueue() {
@@ -109,7 +109,7 @@ bool IncomingTaskQueue::PostPendingTask(PendingTask * pending_task) {
 
 	if (!accept_new_tasks) {
 		DCHECK(!schedule_work);
-		pending_task->task = nullptr;
+		pending_task->task.Reset();
 		return false;
 	}
 
@@ -241,7 +241,7 @@ PendingTask IncomingTaskQueue::DelayedQueue::Pop() {
 
 bool IncomingTaskQueue::DelayedQueue::HasTasks() {
 	//return !queue_.empty();
-	while (!queue_.empty() && !Peek().task)
+	while (!queue_.empty() && Peek().task.is_null())
 		Pop();
 	
 	return !queue_.empty();

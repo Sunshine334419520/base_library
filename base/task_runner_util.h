@@ -5,11 +5,15 @@
 * @Filename: task_runner.h
 * @Last modified by:  YangGuang
 */
+#ifndef BASE_TASK_RUNNER_UTIL_H
+#define BASE_TASK_RUNNER_UTIL_H
 
 #include <utility>
 
 #include "base/callback.h"
 #include "base/logging.h"
+#include "base/bind_util.h"
+#include "base/post_task_and_reply_with_result_internal.h"
 #include "base/task_runner.h"
 
 namespace base {
@@ -32,7 +36,14 @@ bool PostTaskAndReplyWithResult(TaskRunner* task_runner,
 	DCHECK(task);
 	DCHECK(reply);
 	TaskReturnType* result = new TaskReturnType();
-	// ...
-	return true;
+	return task_runner->PostTaskAndReplay(
+		from_here,
+		base::BindOnceClosure(&internal::ReturnAsParamAdapter<TaskReturnType>,
+		std::move(task), result),
+		base::BindOnceClosure(&internal::ReplayAdapter<TaskReturnType, ReplyArgType>,
+		std::move(reply), Owned(result)));
 }
-}
+
+}	// namespace base.
+
+#endif // !BASE_TASK_RUNNER_UTIL_H

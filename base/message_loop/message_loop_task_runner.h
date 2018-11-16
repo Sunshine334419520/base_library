@@ -35,11 +35,11 @@ class BASE_EXPORT MessageLoopTaskRunner : public SingleThreadTaskRunner {
 	void BindToCurrentThread();
 
 	bool PostDelayedTask(const Location& from_here,
-						 Closure Task,
+						 OnceClosure Task,
 						 std::chrono::milliseconds delay) OVERRIDE;
 
 	bool PostNonNestableDelayedTask(const Location& from_here,
-									Closure task,
+									OnceClosure task,
 									std::chrono::milliseconds delay) OVERRIDE;
 
 	virtual bool RunsTasksInCurrentSequence() OVERRIDE;

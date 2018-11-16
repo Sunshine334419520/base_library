@@ -51,10 +51,10 @@ class BASE_EXPORT SequencedTaskRunner : public TaskRunner {
 	 // 但是这个保证提交的任务不会运行在一个已经运行的任务上.
 	 //
 	 // PostNonNestable任务只会比规定的运行的迟，绝对不会早.
-	 bool PostNonNestableTask(const Location& from_here, Closure task);
+	 bool PostNonNestableTask(const Location& from_here, OnceClosure task);
 
 	 virtual bool PostNonNestableDelayedTask(const Location& from_here,
-											 Closure task,
+											 OnceClosure task,
 											 std::chrono::milliseconds delay) = 0;
 
 	 // 提交一个non-nestable task来删除一个给定的对象, 如果返回true，

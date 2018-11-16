@@ -37,7 +37,7 @@ AtExitManager::~AtExitManager() {
 void AtExitManager::RegisterCallback(AtExitCallbackType func,
 									 void * param) {
 	DCHECK(func);
-	RegisterTask(std::bind(func, param));
+	RegisterTask(base::BindClosure(func, param));
 
 }
 
@@ -68,7 +68,7 @@ void AtExitManager::ProcessCallbacksNow() {
 
 	while (!tasks.empty()) {
 		base::Closure task = tasks.top();
-		task();
+		task.Run();
 		tasks.pop();
 	}
 

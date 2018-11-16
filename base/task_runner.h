@@ -53,13 +53,13 @@ class BASE_EXPORT TaskRunner {
 	 // Posts 这个给予的任务到运行， 如果任务可能在将来的某个时刻执行，返回
 	 // ture，如果任务肯定不会运行则返回false.
      bool PostTask(const Location& from_here,
-                   Closure Task);
+				   OnceClosure Task);
     
 	 // 这个像PostTask一样，但是通过这个函数posted的task只会在延迟delay时间，
 	 // 才会运行
      virtual bool PostDelayedTask(const Location& from_here,
-                                 Closure Task,
-                                 std::chrono::milliseconds delay) = 0;
+								  OnceClosure Task,
+                                  std::chrono::milliseconds delay) = 0;
                                  
 	 // 如果返回true，代表实在当前序列，或者说是绑定到的当前线程. 
      virtual bool RunsTasksInCurrentSequence() = 0;
@@ -80,8 +80,8 @@ class BASE_EXPORT TaskRunner {
 	 //          std::shared_ptr<DataBuffer> buffer = new DataBuffer();
 	 //          target_thread_.task_runner()->PostTaskAndReply(
 	 //              FROM_HERE,
-	 //              std::bind(&DataBuffer::AddData, buffer),
-	 //              std::bind(&DdataLoader::OndataReceived, std::weak_ptr<DataBuffer>(buffer)));
+	 //              base::BindOnceClosure(&DataBuffer::AddData, buffer),
+	 //              base::BindOnceClosure(&DdataLoader::OndataReceived, std::weak_ptr<DataBuffer>(buffer)));
 	 //      }
 	 //   private: 
 	 //       void OnDataReceived(std::shared_ptr<DataBuffer> buffer) {
@@ -95,8 +95,8 @@ class BASE_EXPORT TaskRunner {
 	 //   * 由于使用了std::weak_ptr所以在任务运行的时候删除DataLoader是不会影响到
 	 //     任务的接受的，weak_ptr发现被删除了就不会发送回复任务了.    
      bool PostTaskAndReplay(const Location& from_here,
-                           Closure task,
-                           Closure reply);
+							OnceClosure task,
+							OnceClosure reply);
                            
  protected: 
      friend struct TaskRunnerTraits;

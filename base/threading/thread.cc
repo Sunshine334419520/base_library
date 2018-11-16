@@ -116,7 +116,7 @@ void Thread::StopSoon() {
 		return;
 	}
 
-	task_runner()->PostTask(FROM_HERE, std::bind(&Thread::ThreadQuitHelper, this));
+	task_runner()->PostTask(FROM_HERE, BindOnceClosure(&Thread::ThreadQuitHelper, this));
 }
 
 PlatformThreadId Thread::GetThreadId() const {

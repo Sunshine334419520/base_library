@@ -127,7 +127,7 @@ class BASE_EXPORT TimerBase {
 			   Receiver* receiver,
 			   void(Receiver::*method())) {
 		Start(posted_from, delay,
-			  std::bind(method, receiver));
+			  base::BindOnceClosure(method, receiver));
 	}
 	*/
 

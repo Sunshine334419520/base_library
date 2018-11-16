@@ -15,18 +15,13 @@
 
 namespace base {
 
+class OnceClosure;
 
-/*
 class BASE_EXPORT Closure {
  public:
 	 Closure(const std::function<void()> fun)
 		 : fun_(fun) {}
-
 	 
-
-	 explicit Closure(std::function<void()>&& fun) noexcept
-		 : fun_(std::move(fun)) {}
-
 	 Closure(const Closure& other)
 		 : fun_(other.fun_) {}
 
@@ -37,6 +32,17 @@ class BASE_EXPORT Closure {
 
 	 Closure& operator=(const Closure& other) = default;
 	 Closure& operator=(Closure&& other) = default;
+
+	 Closure& operator=(std::function<void()> fun) {
+		 this->fun_ = fun;
+		 return *this;
+	 }
+
+	/* Closure& operator=(std::function<void()>&& fun) {
+		 fun_ = fun;
+		 fun = nullptr;
+		 return 
+	 }*/
 
 	 ~Closure() = default;
 
@@ -50,16 +56,21 @@ class BASE_EXPORT Closure {
 
 	 template <typename Fty>
 	 operator std::function<Fty>() { return fun_; }
+
  private:
 	 std::function<void()> fun_;
 };
 
 class BASE_EXPORT OnceClosure {
  public:
-	explicit OnceClosure(std::function<void()> fun)
-		: fun_(fun) {}
-	explicit OnceClosure(std::function<void()>&& fun)
-		: fun_(std::move(fun_)) {}
+	OnceClosure() : fun_(nullptr) {}
+
+	OnceClosure(std::function<void()>&& fun)
+		: fun_(std::move(fun)) {}
+
+	OnceClosure(Closure&& other)
+		: fun_(std::move(other)) {}
+		
 
 
 	OnceClosure(const OnceClosure& other) = delete;
@@ -72,18 +83,24 @@ class BASE_EXPORT OnceClosure {
 
 	bool is_null() const { return fun_ == nullptr; }
 
-	void Run() { 
+	void Run() & { 
 		OnceClosure cb = std::move(*this);
 		cb.fun_();
+	}
+
+	void Run() && {
+		OnceClosure cb = std::move(*this);
+		std::move(cb).fun_();
 	}
 
 	void Reset() { fun_ = nullptr; }
 
 	explicit operator bool() { return !is_null(); }
+	template <typename Fty>
+	operator std::function<Fty>() { return fun_; }
  private:
 	 std::function<void()> fun_;
 };
-*/
 
 
 
@@ -92,9 +109,7 @@ template <typename Fty>
 using Callback = std::function<Fty>;
 
 
-//using Closure = Callback<void()>;
-//using Closure = Callback<void()>;
-using Closure = std::function<void()>;
+
 
 }
 

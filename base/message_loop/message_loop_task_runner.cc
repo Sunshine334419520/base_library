@@ -30,20 +30,20 @@ void MessageLoopTaskRunner::BindToCurrentThread() {
 }
 
 bool MessageLoopTaskRunner::PostDelayedTask(const Location& from_here,
-											Closure task,
+											OnceClosure task,
 											std::chrono::milliseconds delay) {
-	DCHECK_NOTNULL(task);
+	DCHECK(!task.is_null());
 
-	return incoming_queue_->AddToIncomingQueue(from_here, task, delay,
+	return incoming_queue_->AddToIncomingQueue(from_here, std::move(task), delay,
 											   Nestable::kNestable);
 }
 
 bool MessageLoopTaskRunner::PostNonNestableDelayedTask(const Location& from_here,
-													   Closure task,
+													   OnceClosure task,
 													   std::chrono::milliseconds delay) {
-	DCHECK_NOTNULL(task);
+	DCHECK(!task.is_null());
 
-	return incoming_queue_->AddToIncomingQueue(from_here, task, delay,
+	return incoming_queue_->AddToIncomingQueue(from_here, std::move(task), delay,
 											   Nestable::kNonNestable);
 }
 

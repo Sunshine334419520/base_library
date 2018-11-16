@@ -26,9 +26,9 @@ thread_local LazyInstance<RunLoop::Delegate*>::Leaky tls_delegate =
 
 // 如果任务是运行在当前的序列上就直接运行他，否则的话就传递这个任务.
 void ProxyToTaskRunner(std::shared_ptr<SequencedTaskRunner> task_runner,
-					   Closure closure) {
+					   OnceClosure closure) {
 	if (task_runner->RunsTasksInCurrentSequence()) {
-		std::move(closure)();
+		std::move(closure).Run();
 		return;
 	}
 	task_runner->PostTask(FROM_HERE, std::move(closure));
@@ -102,7 +102,7 @@ void RunLoop::Quit() {
 	// origin_task_runner_绑定的线程的消息队列上.
 	if (!origin_task_runner_->RunsTasksInCurrentSequence()) {
 		origin_task_runner_->PostTask(
-			FROM_HERE, std::bind(&RunLoop::Quit, this));
+			FROM_HERE, base::BindOnceClosure(&RunLoop::Quit, this));
 		return;
 	}
 
@@ -118,25 +118,27 @@ void RunLoop::QuitWhenIdle() {
 	// origin_task_runner_绑定的线程的消息队列上.
 	if (!origin_task_runner_->RunsTasksInCurrentSequence()) {
 		origin_task_runner_->PostTask(
-			FROM_HERE, std::bind(&RunLoop::QuitWhenIdle, this));
+			FROM_HERE, base::BindOnceClosure(&RunLoop::QuitWhenIdle, this));
 		return;
 	}
 	
 	quit_when_idle_received_ = true;
 }
 
-auto RunLoop::QuitClosure() {
+Closure RunLoop::QuitClosure() {
 	allow_quit_current_deprecated_ = false;
 
-	return std::bind(&ProxyToTaskRunner, origin_task_runner_,
-					 std::bind(&RunLoop::Quit, this));
+	/*return base::BindClosure(&ProxyToTaskRunner, origin_task_runner_,
+					 base::BindOnceClosure(&RunLoop::Quit, this));*/
+	return Closure();
 }
 
-auto RunLoop::QuitWhenIdleClosure() {
+Closure RunLoop::QuitWhenIdleClosure() {
 	allow_quit_current_deprecated_ = false;
 
-	return std::bind(&ProxyToTaskRunner, origin_task_runner_,
-					 std::bind(&RunLoop::QuitWhenIdle, weak_factory_));
+	/*return base::BindClosure(&ProxyToTaskRunner, origin_task_runner_,
+					 base::BindOnceClosure(&RunLoop::QuitWhenIdle, this));*/
+	return Closure();
 }
 
 // static.
@@ -183,13 +185,13 @@ void RunLoop::QuitCurrentWhenIdleDeprecated() {
 }
 
 // static
-Closure RunLoop::QuitCurrentWhenIdleClosureDeprecated() {
+OnceClosure RunLoop::QuitCurrentWhenIdleClosureDeprecated() {
   // TODO(844016): Fix callsites and enable this check, or remove the API.
   // Delegate* delegate = tls_delegate.Get().Get();
   // DCHECK(delegate->active_run_loops_.top()->allow_quit_current_deprecated_)
   //     << "Please migrate off QuitCurrentWhenIdleClosureDeprecated(), e.g to "
   //        "QuitWhenIdleClosure().";
-  return std::bind(&RunLoop::QuitCurrentWhenIdleDeprecated);
+  return base::BindOnceClosure(&RunLoop::QuitCurrentWhenIdleDeprecated);
 }
 
 bool RunLoop::BeforeRun() {

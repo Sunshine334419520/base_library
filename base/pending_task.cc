@@ -12,7 +12,7 @@
 
 namespace base {
 PendingTask::PendingTask(const Location & posted_from,
-						 Closure task, 
+						 OnceClosure task, 
 						 std::chrono::milliseconds delayed_run_time,
 						 Nestable nestable)
 	: task(std::move(task)),

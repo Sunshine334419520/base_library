@@ -28,10 +28,10 @@ class BASE_EXPORT PostTaskAndReplayImpl {
      // Posts |task| by calling PostTask(). On completion, posts |reply| to the
      // origin sequence. Can only be called when
      bool PostTaskAndReply(const Location& from_here,
-                           Closure task,
-                           Closure reply);
+                           OnceClosure task,
+                           OnceClosure reply);
  private: 
-     virtual bool PostTask(const Location& from_here, Closure task) = 0;
+     virtual bool PostTask(const Location& from_here, OnceClosure task) = 0;
 };
 
 }   // namespace internal.

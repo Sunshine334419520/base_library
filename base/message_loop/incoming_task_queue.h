@@ -70,7 +70,7 @@ class IncomingTaskQueue {
 	 // TryAddToIncomingQueue()，多个不同的线程可以同时提交.
 	 // 如果成功返回true, 否则放回false，任务的所有权会被转移到调用的方法.
 	 bool AddToIncomingQueue(const Location& from_here,
-							 Closure task,
+							 OnceClosure task,
 							 std::chrono::milliseconds delay,
 							 Nestable nestable);
 

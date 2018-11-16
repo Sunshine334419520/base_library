@@ -13,7 +13,7 @@
 namespace base {
 
 bool SequencedTaskRunner::PostNonNestableTask(const Location & from_here,
-											  Closure task) {
+											  OnceClosure task) {
 	return PostNonNestableDelayedTask(from_here, std::move(task),
 									  std::chrono::milliseconds(0));
 }
@@ -24,7 +24,7 @@ bool
 SequencedTaskRunner::DeleteOrReleaseSoonInternal(const Location & from_here,
 												 void(*deleter)(const void *), 
 												 const void * object)  {
-	return PostNonNestableTask(from_here, std::bind(deleter, object));
+	return PostNonNestableTask(from_here, base::BindOnceClosure(deleter, object));
 }
 
 OnTaskRunnerDeleter::OnTaskRunnerDeleter(

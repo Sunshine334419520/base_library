@@ -20,7 +20,7 @@ class PostTaskAndReplyTaskRunner : public internal::PostTaskAndReplayImpl {
  public:
 	 explicit PostTaskAndReplyTaskRunner(TaskRunner* destination);
  private:
-	 bool PostTask(const Location& from_here, Closure task) OVERRIDE;
+	 bool PostTask(const Location& from_here, OnceClosure task) OVERRIDE;
 
 	 TaskRunner* destination_;
 };
@@ -31,23 +31,23 @@ PostTaskAndReplyTaskRunner::PostTaskAndReplyTaskRunner(
 }
 
 bool PostTaskAndReplyTaskRunner::PostTask(const Location& from_here,
-										  Closure task) {
-	return destination_->PostTask(from_here, task);
+										  OnceClosure task) {
+	return destination_->PostTask(from_here, std::move(task));
 }
 
 }	// namespace .
 
 
-bool TaskRunner::PostTask(const Location & from_here, Closure task) {
+bool TaskRunner::PostTask(const Location & from_here, OnceClosure task) {
 	return PostDelayedTask(from_here, std::move(task),
 						   std::chrono::milliseconds(0));
 }
 
 bool TaskRunner::PostTaskAndReplay(const Location & from_here,
-								   Closure task,
-								   Closure reply) {
+								   OnceClosure task,
+								   OnceClosure reply) {
 	return PostTaskAndReplyTaskRunner(this).PostTaskAndReply(
-		from_here, task, reply);
+		from_here, std::move(task), std::move(reply));
 }
 
 TaskRunner::TaskRunner() = default;

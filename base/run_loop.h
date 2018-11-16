@@ -75,8 +75,8 @@ class BASE_EXPORT RunLoop {
 	//	RunLoop run_loop;
 	// PostTask(run_loop.QuitClosure());
 	// run_loop.Run();
-	auto QuitClosure();
-	auto QuitWhenIdleClosure();
+	Closure QuitClosure();
+	Closure QuitWhenIdleClosure();
 
 	// 如果又一个RunLoop活跃在当前线程，那么就返回true, 这个是安全的在还没调用
 	// RegisterDelegateForCurrentThread(). 之后也是安全的.
@@ -153,7 +153,7 @@ class BASE_EXPORT RunLoop {
 	// 使用这些引用，以便将Run()/Quit()链接到单个RunLoop实例并提高可读性。
 	static void QuitCurrentDeprecated();
 	static void QuitCurrentWhenIdleDeprecated();
-	static Closure QuitCurrentWhenIdleClosureDeprecated();
+	static OnceClosure QuitCurrentWhenIdleClosureDeprecated();
 
 
  private:

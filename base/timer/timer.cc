@@ -107,12 +107,12 @@ void TimerBase::Stop() {
 	is_running_ = false;
 
 	if (!retain_user_task_)
-		user_task_ = nullptr;
+		user_task_.Reset();
 }
 
 void TimerBase::Reset() {
 	// user_task必须不为空
-	DCHECK_NOTNULL(user_task_);
+	DCHECK(!user_task_.is_null());
 
 	// 如果没有pending task，那么启动一个就返回.
 	if (!scheduled_task_) {
@@ -149,13 +149,13 @@ void TimerBase::PostNewScheduledTask(TimeDelta delay) {
 	scheduled_task_ = new BaseTimerTaskInternal(this);
 	if (delay > TimeDelta(0)) {
 		GetTaskRunner()->PostDelayedTask(posted_from_,
-			std::bind(&BaseTimerTaskInternal::Run, scheduled_task_),
+			base::BindOnceClosure(&BaseTimerTaskInternal::Run, scheduled_task_),
 		 delay);
 		scheduled_run_time_ = desired_run_time_ = Now() + delay;
 	}
 	else {
 		GetTaskRunner()->PostTask(posted_from_,
-								  std::bind(&BaseTimerTaskInternal::Run,
+								  base::BindOnceClosure(&BaseTimerTaskInternal::Run,
 								  scheduled_task_));
 	}
 }
@@ -191,7 +191,7 @@ void TimerBase::RunScheduledTask() {
 	else
 		Stop();
 
-	task();
+	task.Run();
 }
 
 }	// namespace internal.
@@ -202,7 +202,7 @@ void OneShotTimer::FireNow() {
 
 	Closure task = user_task();
 	Stop();
-	DCHECK(!user_task());
-	std::move(task)();
+	DCHECK(user_task().is_null());
+	std::move(task).Run();
 }
 }

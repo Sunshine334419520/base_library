@@ -27,7 +27,7 @@ enum class Nestable {
 
 struct BASE_EXPORT PendingTask {
 	PendingTask(const Location& posted_from,
-				Closure task,
+				OnceClosure task,
 				std::chrono::milliseconds delayed_run_time = std::chrono::milliseconds(0),
 				Nestable nestable = Nestable::kNestable);
 	PendingTask(PendingTask&& other);
@@ -38,7 +38,7 @@ struct BASE_EXPORT PendingTask {
 	// Used to support sorting.
 	bool operator<(const PendingTask& other) const;
 
-	Closure task;
+	OnceClosure task;
 	
 	Location posted_from;
 
