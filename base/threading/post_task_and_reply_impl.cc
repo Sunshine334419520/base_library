@@ -12,6 +12,7 @@
 #include "base/logging.h"
 #include "base/sequenced_task_runner.h"
 #include "base/sequenced_task_runner_handle.h"
+#include "base/bind_util.h"
 
 
 namespace base {

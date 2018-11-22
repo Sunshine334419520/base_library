@@ -16,6 +16,7 @@
 #include "base/single_thread_task_runner.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/logging.h"
+#include "base/bind_util.h"
 
 namespace base {
 

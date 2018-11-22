@@ -10,6 +10,8 @@
 #include <utility>
 #include <functional>
 
+#include "bind_util.h"
+
 namespace base {
 
 bool SequencedTaskRunner::PostNonNestableTask(const Location & from_here,

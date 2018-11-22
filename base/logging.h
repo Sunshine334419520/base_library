@@ -84,7 +84,21 @@ logging::Logging(log_type).Start(log_type, __LINE__, __FUNCTION__)
 
 #define CHECK_EQ(val1, val2)		\
 	if (!((val1) == (val2))) {			\
-		LOG(logging::LogType::ERROR) << "CHECK_NE failed" \
+		LOG(logging::LogType::ERROR) << "CHECK_EQ failed" \
+		<< #val1 << "=" << (val1) << std::endl				\
+		<< #val2 << "=" << (val2) << std::endl;			\
+	}
+
+#define CHECK_GE(val1, val2)		\
+	if (!((val1) >= (val2))) {			\
+		LOG(logging::LogType::ERROR) << "CHECK_GE failed" \
+		<< #val1 << "=" << (val1) << std::endl				\
+		<< #val2 << "=" << (val2) << std::endl;			\
+	}
+
+#define CHECK_LT(val1, val2)		\
+	if (!((val1) < (val2))) {			\
+		LOG(logging::LogType::ERROR) << "CHECK_LT failed" \
 		<< #val1 << "=" << (val1) << std::endl				\
 		<< #val2 << "=" << (val2) << std::endl;			\
 	}
@@ -113,6 +127,12 @@ logging::Logging(log_type).Start(log_type, __LINE__, __FUNCTION__)
 #define DCHECK_NE(val1 ,val2)				\
 	CHECK_NE(val1, val2)
 
+#define DCHECK_GE(val1 ,val2)				\
+	CHECK_GE(val1, val2)
+
+#define DCHECK_LT(val1 ,val2)				\
+	CHECK_LT(val1, val2)
+
 #else 
 
 #define DCHECK(condition)	
@@ -120,6 +140,8 @@ logging::Logging(log_type).Start(log_type, __LINE__, __FUNCTION__)
 #define DCHECK_NULL(val1)
 #define DCHECK_EQ(val1, val2)
 #define DCHECK_NE(val1, val2)
+#define DCHECK_GE(val1, val2)
+#define DCHECK_LT(val1, val2)
 
 
 #endif		// DCHECK_IS_ON();

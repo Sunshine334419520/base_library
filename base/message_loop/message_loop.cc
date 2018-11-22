@@ -177,7 +177,7 @@ MessageLoop::MessageLoop(Type type,
 
 void MessageLoop::BindToCurrentThread() {
 	DCHECK(!pump_);
-	if (!pump_factory_)
+	if (pump_factory_)
 		pump_ = std::move(pump_factory_)();
 	else
 		pump_ = CreateMessagePumpForType(type_);

@@ -9,6 +9,7 @@
 #include "base/location.h"
 #include "base/logging.h"
 #include "base/lazy_instance.h"
+#include "base/bind_util.h"
 
 namespace base {
 
@@ -49,15 +50,15 @@ bool Thread::StartWithOptions(const Options & options) {
 
 	id_ = kInvalidThreadId;
 
-	//SetThreadWasQuitProperly(false);
-	/*MessageLoop::Type type = options.message_loop_type;
-	if (!options.message_pump_factory.is_null())
+	SetThreadWasQuitProperly(false);
+	MessageLoop::Type type = options.message_loop_type;
+	if (options.message_pump_factory)
 		type = MessageLoop::TYPE_CUSTOM;
 
-	message_loop_timer_slack_ = options.timer_slack;
+	//message_loop_timer_slack_ = options.timer_slack;
 	std::unique_ptr<MessageLoop> message_loop_owned =
 		MessageLoop::CreateUnbound(type, options.message_pump_factory);
-	message_loop_ = message_loop_owned.get();*/
+	message_loop_ = message_loop_owned.get();
 
 	{
 		std::lock_guard<std::mutex> lock(thread_mutex_);
@@ -71,7 +72,7 @@ bool Thread::StartWithOptions(const Options & options) {
 
 	joinable_ = options.joinable;
 	
-	// ignore_result(message_loop_owned_.release());
+	ignore_result(message_loop_owned.release());
 
 	DCHECK(message_loop_);
 	return true;

@@ -56,7 +56,8 @@ std::thread CreateThread(size_t stack_size,
 	
 	if (!params->joinable)
 		th.detach();
-	return std::move(th);
+	params.release();
+	return th;
 }
 
 }		// namespace 

@@ -8,6 +8,7 @@
 #include "base/at_exit.h"
 
 #include "base/logging.h"
+#include "base/bind_util.h"
 
 namespace base {
 

@@ -20,6 +20,7 @@
 namespace base {
 
 struct TaskRunnerTraits;
+struct DefaultDestroyTraits;
 
 // 一个TaskRunner对象是一个用来运行posted task的对象，TaskRunner提供了
 // 一个可以运行每一个task的方法, TaskRunner 提供一个非常weak的保证，在
@@ -100,6 +101,8 @@ class BASE_EXPORT TaskRunner {
                            
  protected: 
      friend struct TaskRunnerTraits;
+	 friend struct DefaultDestroyTraits;
+
      TaskRunner();
      virtual ~TaskRunner();
 

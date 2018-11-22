@@ -18,7 +18,7 @@ namespace {
 
 std::chrono::milliseconds 
 CalculateDelayedRuntime(std::chrono::milliseconds delay) {
-	std::chrono::milliseconds delayed_run_time;
+	std::chrono::milliseconds delayed_run_time(0);
 	if (delay > std::chrono::milliseconds(0))
 		delayed_run_time = std::chrono::duration_cast<
 		std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch() +
@@ -43,7 +43,7 @@ bool IncomingTaskQueue::AddToIncomingQueue(const Location & from_here,
 										   OnceClosure task,
 										   std::chrono::milliseconds delay,
 										   Nestable nestable) {
-	CHECK(!task);
+	CHECK(!task.is_null());
 
 	PendingTask pending_task(from_here, std::move(task),
 							 CalculateDelayedRuntime(delay), nestable);

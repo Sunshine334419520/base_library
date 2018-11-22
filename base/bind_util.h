@@ -29,7 +29,7 @@ inline OnceClosure BindOnceClosure(Function&& functor, Args&&... args) {
 namespace internal {
 
 // 这个是一个帮助函数，为了帮助bind绑定参数时，让绑定的参数函数运行完成之后就自动释放.
-template <typeanme T>
+template <typename T>
 class OwnedWrapper {
  public:
 	 explicit OwnedWrapper(T* o) : ptr_(o) {}

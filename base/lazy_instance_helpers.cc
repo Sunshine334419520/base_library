@@ -57,7 +57,7 @@ bool NeedsLazyInstance(std::atomic<void*>* state) {
 void CompleteLazyInstance(void (*destructor)(void*),
                           void* destructor_arg) {
 
-	if (!destructor)
+	if (destructor)
 		AtExitManager::RegisterCallback(destructor, destructor_arg);
 }
 

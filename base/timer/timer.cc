@@ -13,6 +13,7 @@
 #include "base/logging.h"
 #include "base/threading/platform_thread.h"
 #include "base/sequenced_task_runner_handle.h"
+#include "base/bind_util.h"
 
 namespace base {
 namespace internal {

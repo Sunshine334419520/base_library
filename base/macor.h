@@ -107,5 +107,10 @@
 #endif
 
 
+template <typename T>
+inline void ignore_result(const T&) {
+}
+
+
 
 #endif //TINYCHATSERVER_MACOR_H

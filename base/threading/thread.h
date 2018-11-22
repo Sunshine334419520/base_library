@@ -38,11 +38,11 @@ class BASE_EXPORT Thread : PlatformThread::Delegate {
 			 MessagePump>()> MessagePumpFactory;
 
 		 Options();
-		 //Options(MessageLoop::Type type, size_t size);
+		 Options(MessageLoop::Type type, size_t size);
 		 Options(const Options& other);
 		 ~Options();
 		 
-		 //MessageLoop::Type message_loop_type = MessageLoop::TYPE_DEFAULT;
+		 MessageLoop::Type message_loop_type = MessageLoop::TYPE_DEFAULT;
 		 MessagePumpFactory message_pump_factory;
 
 		 size_t stack_size = 0;

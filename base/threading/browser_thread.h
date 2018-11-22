@@ -31,7 +31,7 @@ class BASE_EXPORT BrowserThread {
 	 enum ID {
 		 UI,
 		 IO,
-		 IO_COUNT
+		 ID_COUNT
 	 };
 
 	 // 这些函数都是一些与message_loop上的post task是一样的，他们会发送任务到
@@ -45,7 +45,7 @@ class BASE_EXPORT BrowserThread {
 	 static bool PostDelayedTask(ID identifier,
 								 const base::Location& from_here,
 								 base::OnceClosure task,
-								 std::chrono::microseconds delay);
+								 std::chrono::milliseconds delay);
 	 static bool PostNonNestableTask(ID identifier,
 									 const base::Location& from_here,
 									 base::OnceClosure task);
