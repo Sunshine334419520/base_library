@@ -19,7 +19,7 @@ namespace base {
 namespace {
 
 // 一个线程局部的变量.
-thread_local LazyInstance<SequencedTaskRunnerHandle>::Leaky
+thread_local LazyInstance<SequencedTaskRunnerHandle*>::Leaky
 	sequenced_task_runner_tls = LAZY_INSTANCE_INITIALIZER;
 
 }	// namespace.
@@ -27,7 +27,7 @@ thread_local LazyInstance<SequencedTaskRunnerHandle>::Leaky
 std::shared_ptr<SequencedTaskRunner> 
 SequencedTaskRunnerHandle::Get() {
 	const SequencedTaskRunnerHandle* handle =
-		sequenced_task_runner_tls.Pointer();
+		sequenced_task_runner_tls.Get();
 
 	if (handle)
 		return handle->task_runner_;
@@ -43,12 +43,10 @@ SequencedTaskRunnerHandle::Get() {
 }
 
 bool SequencedTaskRunnerHandle::IsSet() {
-	return sequenced_task_runner_tls.Pointer() != nullptr;
+	//return *(sequenced_task_runner_tls.Pointer()) != nullptr;
 	
-	/*
-	return sequenced_task_runner_tls.Pointer() != nullptr ||
+	return sequenced_task_runner_tls.Get() != nullptr ||
 		   ThreadTaskRunnerHandle::IsSet();
-		   */
 }
 
 SequencedTaskRunnerHandle::SequencedTaskRunnerHandle(
@@ -57,14 +55,13 @@ SequencedTaskRunnerHandle::SequencedTaskRunnerHandle(
 	DCHECK(task_runner_->RunsTasksInCurrentSequence());
 	DCHECK(!SequencedTaskRunnerHandle::IsSet());
 
-	sequenced_task_runner_tls.private_instance_.store(
-		nullptr, std::memory_order_relaxed);
+	*sequenced_task_runner_tls.private_instance_ = this;
 }
 
 
 SequencedTaskRunnerHandle::~SequencedTaskRunnerHandle() {
 	DCHECK(task_runner_->RunsTasksInCurrentSequence());
-	DCHECK_EQ(sequenced_task_runner_tls.Pointer(), this);
+	DCHECK_EQ(sequenced_task_runner_tls.Get(), this);
 
 	sequenced_task_runner_tls.private_instance_.store(
 		nullptr, std::memory_order_relaxed);

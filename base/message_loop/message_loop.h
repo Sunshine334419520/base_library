@@ -59,6 +59,8 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate,
 		 TYPE_IO,
 	 };
 
+	 MessageLoop() : MessageLoop(nullptr) {}
+
 	 explicit MessageLoop(Type type = TYPE_DEFAULT);
 
 	 explicit MessageLoop(std::unique_ptr<MessagePump> pump);

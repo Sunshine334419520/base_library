@@ -21,7 +21,7 @@ namespace {
 
 
 MessageLoop* GetTLSMessageLoop() {
-	static thread_local MessageLoop* lazy_tls_ptr = new  MessageLoop();
+	static thread_local MessageLoop* lazy_tls_ptr = nullptr;
 	return lazy_tls_ptr;
 }
 

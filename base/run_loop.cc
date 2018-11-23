@@ -56,21 +56,18 @@ void RunLoop::RegisterDelegateForCurrentThread(Delegate* delegate) {
 	DCHECK(!delegate->bound_);
 
 	// 可能在之前这个线程已经绑定过了，这样会报错.
-	DCHECK(!tls_delegate.Pointer());
-	tls_delegate.private_instance_.store(&delegate,
-										 std::memory_order_acq_rel);
-	/*
-	auto tmp = tls_delegate.Get();
-	tmp = delegate;
-	*/
+	DCHECK(!tls_delegate.Get());
+	//tls_delegate.private_instance_.store(&delegate);
+	*tls_delegate.private_instance_ = delegate;
+	
 	delegate->bound_ = true;
 }
 
 RunLoop::RunLoop(Type type)
 	: delegate_(tls_delegate.Get()),
    	  type_(type),
-	  origin_task_runner_(ThreadTaskRunnerHandle::Get()),
-	  weak_factory_(std::shared_ptr<RunLoop>(std::move(this))) {
+	  origin_task_runner_(ThreadTaskRunnerHandle::Get()) {
+	  //weak_factory_(std::shared_ptr<RunLoop>(std::move(this))) {
 	DCHECK(delegate_);
 	DCHECK(origin_task_runner_);
 }

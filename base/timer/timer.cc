@@ -65,7 +65,11 @@ TimerBase::TimerBase(const Location& posted_from,
 					 bool is_repeating)
 	: TimerBase(posted_from, delay, user_task, is_repeating, nullptr) {}
 
-TimerBase::TimerBase(const Location& posted_from, TimeDelta delay, const base::Closure& user_task, bool is_repeating, const TickClock* tick_clock)
+TimerBase::TimerBase(const Location& posted_from,
+					 TimeDelta delay,
+					 const base::Closure& user_task,
+					 bool is_repeating,
+					 const TickClock* tick_clock)
 	: scheduled_task_(nullptr),
 	  posted_from_(posted_from),
 	  delay_(delay),

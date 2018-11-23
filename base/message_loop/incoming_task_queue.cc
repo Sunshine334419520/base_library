@@ -125,7 +125,7 @@ bool IncomingTaskQueue::PostPendingTask(PendingTask * pending_task) {
 }
 
 bool IncomingTaskQueue::PostPendingTaskLockRequired(PendingTask * pending_task) {
-	std::lock_guard<std::mutex> lock(incoming_queue_lock_);
+	//std::lock_guard<std::mutex> lock(incoming_queue_lock_);
 
 	pending_task->sequence_num = next_sequence_num_++;
 

@@ -18,21 +18,21 @@ namespace base {
 
 namespace {
 
-thread_local LazyInstance<ThreadTaskRunnerHandle>::Leaky 
+thread_local LazyInstance<ThreadTaskRunnerHandle*>::Leaky 
 	thread_task_runner_tls = LAZY_INSTANCE_INITIALIZER;
 
 }
 
 std::shared_ptr<SingleThreadTaskRunner> 
 ThreadTaskRunnerHandle::Get() {
-	ThreadTaskRunnerHandle* current = thread_task_runner_tls.Pointer();
+	ThreadTaskRunnerHandle* current = thread_task_runner_tls.Get();
 
 	DCHECK(current);
 	return current->task_runner_;
 }
 
 bool ThreadTaskRunnerHandle::IsSet() {
-	return !!thread_task_runner_tls.Pointer();
+	return !!(*thread_task_runner_tls.Pointer());
 }
 
 ThreadTaskRunnerHandle::ThreadTaskRunnerHandle(
@@ -43,13 +43,19 @@ ThreadTaskRunnerHandle::ThreadTaskRunnerHandle(
 
 	DCHECK(!SequencedTaskRunnerHandle::IsSet());
 
-	thread_task_runner_tls.private_instance_.store(this,
+	/*auto temp = thread_task_runner_tls.Get();
+	temp = this;*/
+	*thread_task_runner_tls.private_instance_ = this;
+
+	/*
+	thread_task_runner_tls.private_instance_.store(&tmp,
 												   std::memory_order_relaxed);
+												   */
 }
 
 ThreadTaskRunnerHandle::~ThreadTaskRunnerHandle() {
 	DCHECK(task_runner_->BelongsToCurrentThread());
-	DCHECK_EQ(thread_task_runner_tls.Pointer(), this);
+	DCHECK_EQ(thread_task_runner_tls.Get(), this);
 
 	thread_task_runner_tls.private_instance_.store(nullptr, 
 												   std::memory_order_relaxed);
