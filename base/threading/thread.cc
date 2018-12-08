@@ -21,6 +21,9 @@ thread_local base::LazyInstance<bool>::Leaky lazy_tls_bool =
 
 Thread::Options::Options() = default;
 
+Thread::Options::Options(MessageLoop::Type type, size_t size)
+	: message_loop_type(type), stack_size(size) {}
+
 Thread::Options::Options(const Options & other) = default;
 
 Thread::Options::~Options() = default;

@@ -27,7 +27,9 @@ class PostTaskAndReplyRelay {
 		 : from_here_(from_here),
 		   origin_task_runner_(SequencedTaskRunnerHandle::Get()),
 		   reply_(std::move(reply)),
-		   task_(std::move(task_)) {}
+		 task_(std::move(task)) {
+		 int i = 0;
+	 }
 
 	 ~PostTaskAndReplyRelay() {
 

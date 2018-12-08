@@ -33,15 +33,17 @@ bool PostTaskAndReplyWithResult(TaskRunner* task_runner,
 								const Location& from_here,
 								base::Callback<TaskReturnType()> task,
 								base::Callback<void(ReplyArgType)> reply) {
-	DCHECK(task);
-	DCHECK(reply);
+	DCHECK_NOTNULL(task);
+	DCHECK_NOTNULL(reply);
+	printf("PostTaskAndReplyWithResult\n");
 	TaskReturnType* result = new TaskReturnType();
 	return task_runner->PostTaskAndReplay(
 		from_here,
 		base::BindOnceClosure(&internal::ReturnAsParamAdapter<TaskReturnType>,
 		std::move(task), result),
 		base::BindOnceClosure(&internal::ReplayAdapter<TaskReturnType, ReplyArgType>,
-		std::move(reply), Owned(result)));
+		std::move(reply), result));
+	return false;
 }
 
 }	// namespace base.

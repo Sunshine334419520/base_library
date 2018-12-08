@@ -20,6 +20,8 @@
 #include "base/logging.h"
 #include "base/macor.h"
 #include "base/single_thread_task_runner.h"
+#include "base/post_task_and_reply_with_result_internal.h"
+#include "base/task_runner_util.h"
 
 namespace sun {
 
@@ -65,14 +67,19 @@ class BASE_EXPORT BrowserThread {
 		 const base::Location& from_here,
 		 base::Callback<ReturnType()> task,
 		 base::Callback<void(ReplyArgType)> reply) {
-		 return false;
+		 std::shared_ptr<base::SingleThreadTaskRunner> task_runner =
+			 GetTaskRunnerForThread(identifier);
+		 bool result = base::PostTaskAndReplyWithResult<ReturnType, ReplyArgType>(
+			 task_runner.get(), 
+			 from_here, std::move(task), std::move(reply));
+		 return result;
 	 }
 
 	 template <typename T>
 	 static bool DeleteSoon(ID identifier,
 							const base::Location& from_here,
 							const T* object) {
-		 return false;
+		 return GetTaskRunnerForThread(identifier)->DeleteSoon(from_here, object);
 	 }
 
 	 template <typename T>

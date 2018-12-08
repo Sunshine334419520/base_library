@@ -47,6 +47,10 @@ ThreadTaskRunnerHandle::ThreadTaskRunnerHandle(
 	temp = this;*/
 	*thread_task_runner_tls.private_instance_ = this;
 
+	auto a = thread_task_runner_tls.Get();
+
+	DCHECK(SequencedTaskRunnerHandle::IsSet());
+
 	/*
 	thread_task_runner_tls.private_instance_.store(&tmp,
 												   std::memory_order_relaxed);

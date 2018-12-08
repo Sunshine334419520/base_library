@@ -26,6 +26,7 @@ template <typename TaskReturnType, typename ReplyArgType>
 void ReplayAdapter(base::Callback<void(ReplyArgType)> callback,
 				   TaskReturnType* result) {
 	std::move(callback)(*result);
+	delete result;
 }
 
 }	// namespace base.

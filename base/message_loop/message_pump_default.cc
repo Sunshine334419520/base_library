@@ -42,7 +42,18 @@ void MessagePumpDefault::Run(Delegate* delegate) {
 			event_.wait(lock);
 		}
 		else {
-			event_.wait_until(lock, &std::_To_xtime(delayed_work_time_));
+			// 在这里原本是准备使用wait_until的，可是由于C++11的wait_until接受的参数
+			// 是time_point, 而我们保存的delayed_work_time_确实std::chrno::duration
+			// 类型，这两个类型之间的转换我弄了半天也没发现如何转换,所有改成了wait_for,
+			// 改成wait_for的话就需要计算等待的时长，而不是运行的时间.
+			auto now = std::chrono::system_clock::now();		
+			auto wait_time = 
+				delayed_work_time_ - std::chrono::duration_cast<
+				std::chrono::milliseconds>(now.time_since_epoch());
+			if (wait_time.count() <= 0)
+				continue;
+			//event_.wait_until(lock, now);
+			event_.wait_for(lock, wait_time);
 		}
 
 	}

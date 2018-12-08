@@ -239,7 +239,7 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate,
 	 const Type type_;
 
 	 // A recent snapshot of Time::Now(), used to check delayed_work_queue_.
-	 std::chrono::milliseconds recent_time;
+	 std::chrono::milliseconds recent_time_;
 
 
 	 std::list<std::shared_ptr<DestructionObserver>> destruction_observers_;

@@ -20,9 +20,9 @@ namespace base {
 namespace {
 
 
-MessageLoop* GetTLSMessageLoop() {
+MessageLoop** GetTLSMessageLoop() {
 	static thread_local MessageLoop* lazy_tls_ptr = nullptr;
-	return lazy_tls_ptr;
+	return &lazy_tls_ptr;
 }
 
 MessageLoop::MessagePumpFactory* messge_pump_for_ui_factory_ = NULL;
@@ -45,14 +45,56 @@ MessageLoop::MessageLoop(std::unique_ptr<MessagePump> pump)
 	//pump_factory_ = std::bind(&ReturnPump, pump);
 }
 
-MessageLoop::~MessageLoop()
-{
+MessageLoop::~MessageLoop() {
+	// 如果|pump_|不是空的话，就代表当前的消息循环已经绑定到了一个线程上了，这种清苦
+	// 可以进行正常的析构操作, 如果|pump_|为空，且current()和当前的this不相等的话，
+	// 这种情况可能存在与分配了消息循环，但是这个消息循环还没有与然和线程进行绑定,这样
+	// 的话也是可以正常析构.
+	MessageLoop* tmp = current();
+	DCHECK((pump_ && current() == this) || (!pump_ && current() != this));
 
+	// 清理所有还没有处理过的任务.
+	// 其实这里我并没有太弄懂为什么要循环100次，按照Google的说法是要设置一个界限，以免
+	// 任务删除不完. 按照我自己的理解，就是删除一个任务可能会又更多的任务添加进来，这样
+	// 会导致任务删除不完，所有Google设置一个100当一个界限值.
+	// 我贴出Google源注释.
+	// Clean up any unprocessed tasks, but take care: deleting a task could
+	// result in the addition of more tasks (e.g., via DeleteSoon).  We set a
+	// limit on the number of times we will allow a deleted task to generate more
+	// tasks.  Normally, we should only pass through this loop once or twice.  If
+	// we end up hitting the loop limit, then it is probably due to one task that
+	// is being stubborn.  Inspect the queues to see who is left.
+	bool tasks_remain;
+	for (int i = 0; i < 100; ++i) {
+		DeletePendingTasks();
+		// 清理了所有的pending tasks后检查queue是否为空，空跳出.
+		tasks_remain = incoming_task_queue_->triage_tasks().HasTasks();
+		if (!tasks_remain)
+			break;
+	}
+	DCHECK(!tasks_remain);
+
+	for (auto& observer : destruction_observers_)
+		observer->WillDestroyCurrentMessageLoop();
+
+	thread_task_runner_handle_.reset();
+
+	// 告诉incoming queue 我们马上释方.
+	incoming_task_queue_->WillDestroyCurrentMessageLoop();
+	incoming_task_queue_ = nullptr;
+	unbound_task_runner_ = nullptr;
+	task_runner_ = nullptr;
+
+	// OK, 现在我们将current()也设置为nullptr,现在就没有人可以访问到我们了
+	if (current() == this) {
+		MessageLoop* current = *GetTLSMessageLoop();
+		current = nullptr;
+	}
 }
 
 // static.
 MessageLoop * MessageLoop::current() {
-	return GetTLSMessageLoop();
+	return *GetTLSMessageLoop();
 }
 
 
@@ -184,8 +226,11 @@ void MessageLoop::BindToCurrentThread() {
 
 	// 设置当前为this
 	DCHECK(!current());
+	// 在这里改变 lazy_tls_ptr的值, GetTLSMessage返回一个二级指针
+	// 利用二级指针改变一级指针的指向.
 	auto current_point = GetTLSMessageLoop();
-	current_point = this;
+	*current_point = this;
+	auto tls_mes_lop = *GetTLSMessageLoop();
 
 	incoming_task_queue_->StartScheduling();
 	unbound_task_runner_->BindToCurrentThread();
@@ -295,9 +340,9 @@ bool MessageLoop::DoDelayedWork(
 	if (!task_execution_allowed_ ||
 		!incoming_task_queue_->delayed_tasks().HasTasks()) {
 		// 没有任务，或者是不允许执行任务时，我们更新最新的时间.
-		recent_time = next_delayed_work_time = 
-			std::chrono::duration_cast<std::chrono::milliseconds>(
-				std::chrono::system_clock::now().time_since_epoch());
+		recent_time_ = next_delayed_work_time =
+			std::chrono::milliseconds(0);
+				
 		return false;
 	}
 
@@ -307,11 +352,11 @@ bool MessageLoop::DoDelayedWork(
 	// 我们处理这些任务的效率就越高。
 	auto next_run_time =
 		incoming_task_queue_->delayed_tasks().Peek().delayed_run_time;
-	if (next_run_time > recent_time) {
+	if (next_run_time > recent_time_) {
 		// 如果延迟时间大于我们最新的时间,我们重新获取最新的时间，并且重新比较.
-		recent_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+		recent_time_ = std::chrono::duration_cast<std::chrono::milliseconds>(
 			std::chrono::system_clock::now().time_since_epoch());
-		if (next_run_time > recent_time) {
+		if (next_run_time > recent_time_) {
 			// 还是大于需要延迟的时间，返回并且等待到达延迟时间再执行.
 			next_delayed_work_time = next_run_time;
 			return false;
