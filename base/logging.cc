@@ -76,4 +76,35 @@ std::ostream & Logging::GetStream(LogType type) {
 }
 
 
+LogMessage::LogMessage(const char * file, int line, LogSeverity severity)
+	: severity_(severity), file_(file), line_(line) {
+	Init(file, line);
+}
+
+LogMessage::LogMessage(const char * file, int line, const char * condition)
+	: severity_(LOG_FATAL), file_(file), line_(line) {
+	Init(file, line);
+	stream_ << "Check failed: " << condition << ". ";
+}
+
+
+
+LogMessage::LogMessage(const char * file, int line, std::string * result)
+	: severity_(LOG_FATAL), file_(file), line_(line) {
+	Init(file, line);
+	stream_ << "Check failed: " << *result;
+	delete result;
+}
+
+LogMessage::LogMessage(const char * file, int line, LogSeverity severity, std::string * result)
+	: severity_(severity), file_(file), line_(line) {
+	Init(file, line);
+	stream_ << "Check failed: " << *result;
+	delete result;
+}
+
+LogMessage::~LogMessage()
+{
+}
+
 }

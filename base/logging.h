@@ -14,8 +14,10 @@
 #include <string>
 #include <cstdlib>
 #include <cstdint>
+#include <sstream>
 
 #include "base/base_export.h"
+#include "macor.h"
 
 namespace logging {
 
@@ -47,6 +49,87 @@ class BASE_EXPORT Logging {
 	 static std::ofstream warn_log_file_;
 	 static std::ofstream error_log_file_;
 	 LogType type_;
+};
+
+typedef int LogSeverity;
+const LogSeverity LOG_VERBOSE = -1;
+
+// Note: the log severities are used to index into the array of names,
+// see log_severity_names.
+const LogSeverity LOG_INFO = 0;
+const LogSeverity LOG_WARNING = 1;
+const LogSeverity LOG_ERROR = 2;
+const LogSeverity LOG_FATAL = 3;
+const LogSeverity LOG_NUM_SEVERITIES = 4;
+
+// LOG_DFATAL is LOG_FATAL in debug mode, ERROR in normal mode.
+#if defined(NDEBUG)
+const LogSeverity LOG_FATAL = LOG_ERROR;
+#else
+const LogSeverity LOG_DFATAL = LOG_FATAL;
+#endif
+
+class BASE_EXPORT LogMessage {
+ public:
+	 // Used for LOG(severity).
+	 LogMessage(const char* file, int line, LogSeverity severity);
+
+	 // Used for CHECK(). Implied severity = LOG_FATAL.
+	 LogMessage(const char* file, int line, const char* condition);
+
+	 // Used for CHECK_EQ(), etc, Takes ownership of the given string.
+	 LogMessage(const char* file, int line, std::string* result);
+	 LogMessage(const char* file, int line, 
+				LogSeverity severity, std::string* result);
+
+	 ~LogMessage();
+
+	 std::ostream& stream() { return stream_; }
+
+	 LogSeverity severity() { return severity_; }
+	 std::string str() { return stream_.str(); }
+	 
+
+ private:
+	 void Init(const char* file, int line);
+
+	 LogSeverity severity_;
+	 std::ostringstream stream_;
+	 // 消息的开始的偏移.
+	 size_t message_start_;
+
+	 // 
+	 const char* file_;
+	 const int line_;
+
+#if defined(OS_WIN)
+	 // Stores the current value of GetLastError in the constructor and restores
+	 // it in the destructor by calling SetLastError.
+	 // This is useful since the LogMessage class uses a lot of Win32 calls
+	 // that will lose the value of GLE and the code that called the log function
+	 // will have lost the thread error value when the log call returns.
+	 class SaveLastError {
+	 public:
+		 SaveLastError();
+		 ~SaveLastError();
+
+		 unsigned long get_error() const { return last_error_; }
+
+	 protected:
+		 unsigned long last_error_;
+	 };
+
+	 SaveLastError last_error_;
+#endif
+
+	 DISALLOW_COPY_AND_ASSIGN(LogMessage);
+};
+
+class LogMessageVoidify {
+ public:
+	 LogMessageVoidify() = default;
+
+	 void operator&(std::ostream&) {}
 };
 
 }		// namespace logging.
